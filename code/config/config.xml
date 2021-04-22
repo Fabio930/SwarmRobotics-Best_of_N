@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+
+<configuration>
+    <arena
+          depth="4"
+          num_branches="3"
+          num_agents="10"
+          max_steps="0"
+          num_targets="6"
+          >
+          <agent
+                k="2"
+                h="1"
+
+                />
+          <target
+                />
+    </arena>
+</configuration>
