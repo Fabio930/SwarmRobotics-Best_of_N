@@ -68,14 +68,15 @@ def start(argv):
         root.mainloop()
     else:
         num_runs = 0
-        while num_runs < arena.get_num_runs():
+        while num_runs < arena.num_runs:
             print ("************* Run number: ", num_runs, ' *************')
             num_runs += 1
-            arena.update_run_id(num_runs)
-            if arena.get_seed() is None:
+            arena.run_id = num_runs
+            if arena.random_seed is None:
                 arena.set_random_seed()
             else:
-                arena.set_random_seed(arena.get_seed()+arena.get_run_id())
+                arena.run_id += arena.random_seed
+                arena.set_random_seed(arena.run_id)
             arena.init_experiment()
             arena.run_experiment()
             arena.save_results()

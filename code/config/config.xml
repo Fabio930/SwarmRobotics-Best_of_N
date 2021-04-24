@@ -2,15 +2,15 @@
 
 <configuration>
     <arena
-          depth="4"
-          num_branches="3"
           num_agents="10"
           max_steps="0"
           num_targets="6"
+          tree_branches="2"
+          tree_depth="2"
           >
           <agent
-                k="2"
-                h="1"
+                k="1"
+                h=".1"
 
                 />
           <target

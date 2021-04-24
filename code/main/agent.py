@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-import sys
+import sys,copy,math
 import numpy as np
+from main.tree import Tree
 ########################################################################################
-## Pysage Agent
+## Agent
 ########################################################################################
 
 ##########################################################################
@@ -28,11 +29,11 @@ class AgentFactory:
 ##########################################################################
 # the main agent class
 class Agent:
+
     num_agents = 0
-    root = None
-    P_up = 0.5
-    k = 1
-    h = 1
+    arena      = None
+    k = .8
+    h = .2
 
     class Factory:
         def create(self, config_element, arena): return Agent(config_element, arena)
@@ -42,172 +43,120 @@ class Agent:
     # Initialisation of the Agent class
     def __init__(self, config_element, arena):
 
-        if Agent.num_agents == 0:
-            # reference to the arena
-            Agent.root = arena
-
-            if config_element.attrib.get("k") is not None:
-                Agent.k = int(config_element.attrib["k"])
-            if config_element.attrib.get("h") is not None:
-                Agent.h = int(config_element.attrib["h"])
-            if config_element.attrib.get("P_up") is not None:
-                Agent.P_up = int(config_element.attrib["P_up"])
-                if Agent.P_up < 0 or Agent.P_up > 1:
-                    print ("[ERROR] for tag <agent> in configuration file the parameter <P_up> should be in [0,1]")
-                    sys.exit(2)
-
         # identification
         self.id = Agent.num_agents
 
-        # current position
-        self.node = arena
+        if self.id == 0:
+            # reference to the arena
+            Agent.arena = arena
+            if config_element.attrib.get("k") is not None:
+                k = float(config_element.attrib["k"])
+                if k<=0 or k>1:
+                    print ("[ERROR] for tag <agent> in configuration file the parameter <k> should be in (0,1]")
+                    sys.exit(2)
+                Agent.k = k
+            if config_element.attrib.get("h") is not None:
+                h = float(config_element.attrib["h"])
+                if h<0 or h>1:
+                    print ("[ERROR] for tag <agent> in configuration file the parameter <h> should be in [0,1]")
+                    sys.exit(2)
+                Agent.h = h
 
-        # stored utilities and probability transitions
-        # the dictionary keys are the nodes ids
-        self.nodes_utility = {} # the value is a value for the utility[
-        self.nodes_transition = {} #the value is a vector [committment,recruitment,abandonment,self-inhibition,cross-inhibition]
-        self.nodes_reference = {}
-
-        # committment to a target
-        self.committed = False
-
-        # state: 0=descending, 1=ascending
+        # state (0=descending,1=ascending)
         self.state = 0
+        # move (0=stay,1=change area)
+        self.move = 0
 
-        # choice is a node
-        self.choice = None
+        # position is the id of the current node
+        self.position = 0
+        self.prev_position = 0
+
+        # world representation
+        self.tree = arena.get_tree_copy()
+        self.init_tree = copy.deepcopy(self.tree)
 
         Agent.num_agents += 1
-        print("Agent #"+str(self.id)+" initialized in node:"+str(self.node.id))
 
     ##########################################################################
-    # generic init function brings back to initial configuration
-    def init_experiment( self ):
-        self.node = Agent.root
-        self.state = 0
-        self.choice = None
-        self.committed = False
-        self.nodes_utility = {}
-        self.nodes_transition  = {}
-        self.nodes_reference = {}
-        self.initialize_nodes()
-
-    ##########################################################################
-    # compute a random motion on the tree and the next state of the agent
+    # compute the desired motion and the next state of the agent
     def control(self):
-        print("Agent #"+str(self.id)+" in node:"+str(self.node.id)+" is controlling")
-        agents = self.node.get_neighbour_agents(self.id)
-
-        flag = self.node.get_id()
-        self.nodes_transition.update({flag:[self.nodes_transition.get(flag)[0],self.nodes_transition.get(flag)[1],0,0,0]})
-        if len(self.node.branches) > 0:
-            for b in self.node.branches:
-                flag = b.get_id()
-                self.nodes_transition.update({flag:[0,0,self.nodes_transition.get(flag)[2],self.nodes_transition.get(flag)[3],self.nodes_transition.get(flag)[4]]})
+        print("Agent "+str(self.id)+" is in node "+str(self.position))
+        node = self.tree.catch_node(self.position)
+        agents = Agent.arena.get_neighbour_agents(self)
+        self.update_neighbours_position(agents)
+        node.reset_prob_transitions()
         random_agent = np.random.choice(agents)
-
-        if self.choice != None:
-            self.state = self.pick_a_random_state()
-
+        self.state = np.random.randint(2)
         if self.state == 0:
-            if len(self.node.branches) > 0:
-                for b in self.node.branches:
-                    self.update_node_transition(b,random_agent,self.state)
-                self.choice=np.random.choice(self.node.branches)
-            else:
-                self.choice = None
+            self.update_descend_prob(random_agent,node)
         else:
-            if self.node.parent is not None:
-                self.update_node_transition(self.node,random_agent,self.state)
-                self.choice=self.node.parent
-            else:
-                self.choice = None
+            self.update_ascend_prob(random_agent,node)
+        self.rand_wheel(node)
+        self.new_position(node)
 
     ##########################################################################
-    # generic update function to be overloaded by subclasses
-    def update( self ):
-        print("Agent #"+str(self.id)+" in node:"+str(self.node.id)+" is updating")
-        agents = self.node.get_neighbour_agents(self.id)
-        if self.choice is not None:
-            flag = None
-            for a in range(len(self.node.agents)):
-                if self.node.agents[a].id == self.id:
-                    flag = a
-            self.node.agents = np.delete(self.node.agents,flag)
-            self.choice.agents = np.append(self.choice.agents,self)
-            self.node = self.choice
-            self.update_node_utility(self.node,agents)
+    # generic init function brings back to initial positions
+    def init_experiment( self ):
+        self.tree = copy.deepcopy(self.init_tree)
+        self.state = 0
+        self.position = 0
+        self.prev_position = 0
+        self.move = 0
+
+    ##########################################################################
+    # update functions for control routine
+    def update_descend_prob(self,agent,node):
+        node.committment = Agent.k * node.utility
+        if node.catch_node(agent.position) is not None:
+            agent_node = agent.tree.catch_node(self.position)
+            node.recruitment = Agent.h * agent_node.utility
+
+    def update_ascend_prob(self,agent,node):
+        node.abandonment = Agent.k *(1-node.utility)
+
+        if node.catch_node(agent.position) is not None:
+            agent_node = agent.tree.catch_node(self.position)
+            node.self_inhibition = Agent.h * agent_node.utility * np.heaviside(len(node.committed_agents),0.75*5)
+        elif node.catch_sibling(agent.position) is not None:
+            agent_node = agent.tree.catch_node(self.position)
+            node.self_inhibition = Agent.h * agent_node.utility * np.heaviside(len(node.committed_agents),0.75*5)
+        elif node.catch_sibling_node(agent.position) is not None:
+            agent_node = agent.tree.catch_node(agent.position)
+            node.cross_inhibition = Agent.h * agent_node.utility * np.heaviside(0.25*5,len(node.committed_agents))
+
+    def rand_wheel(self,node):
+        self.move = 0
+        p = abs(np.random.uniform(0,1))
+        if p < node.prob():
+            self.move = 1
+        print(self.state,self.move,p,node.prob())
+
+
+    def new_position(self,node):
+        if self.move == 1:
+            if self.state == 0: # chose a random position in one of the childs_nodes if there are
+                if len(node.child_nodes) > 0:
+                    self.prev_position = self.position
+                    self.position = np.random.choice(node.child_nodes).id
+                else:
+                    self.position = self.prev_position
+            else: # go to parent_node
+                if node.parent_node is not None:
+                    self.prev_position = self.position
+                    self.position = node.parent_node.id
+                else:
+                    self.position = self.prev_position
         else:
-            if self.state == 0:
-                self.state = 1
-            else:
-                self.state = 0
+            self.position = self.prev_position
 
-    ##########################################################################
-    # Choose a random state
-    def pick_a_random_state(self):
-        # if np.random.normal(Agent.P_up ,0.5) > .5:
-        #     return 1
-        # return 0
-        return np.random.choice([0,1])
-
-    ##########################################################################
-    # function to initialize the tree structure
-    def initialize_nodes(self):
-        self.nodes_utility.update({self.node.get_id():0})
-        self.nodes_transition.update({self.node.get_id():[0,0,0,0,0]})
-        self.nodes_reference.update({self.node.get_id():self.node})
-        for branch in self.node.branches:
-            self.init_branch(branch)
-        print("Agent #"+str(self.id)+" has initialized the structure")
-
-    def init_branch(self,branch):
-        self.nodes_reference.update({branch.get_id():branch})
-        self.nodes_utility.update({branch.get_id():0})
-        self.nodes_transition.update({branch.get_id():[0,0,0,0,0]})
-        if len(branch.branches) > 0:
-            for b in branch.branches:
-                self.init_branch(b)
-
-    ##########################################################################
-    # updates agent's utility register
-    def update_node_utility(self,node,agents):
-        targets = node.get_targets()
-        node_utility = 0
-        for t in targets:
-            node_utility += t.quality*(1-self.normalized_cost_distance(t))/self.normalized_lower_bound_cost(agents,t)
-        self.nodes_utility.update({node.get_id():node_utility})
-        print(node_utility)
-
-    def normalized_cost_distance(self,t):
-        MAX_distance = 2 * Agent.root.depth
-        node = self.nodes_reference.get(str(t.assigned[1][0])+""+str(t.assigned[1][1]))
-        distance = self.node.get_distance(node)
-        # print(distance,MAX_distance)
-        return distance/MAX_distance
-
-    def normalized_lower_bound_cost(self, agents,t):
-        sum = 0
+    def update_neighbours_position(self,agents):#cerca la posizione dei vicini salvata nel mio mondo, elimina i relativi committed_agents. POI aggiungi i committed_agents in base alle posizionni attuali
         for a in agents:
-            sum += t.quality*(1-a.normalized_cost_distance(t))
-        return sum
+            self.tree.erase_agent(a)
+            node = self.tree.catch_node(a.position)
+            node.committed_agents = np.append(node.committed_agents,a)
 
     ##########################################################################
-    # updates agent's transition register of a chosen node
-    def update_node_transition(self,node,agent,s):
-        if s == 0:
-            # [committment,recruitment,0,0,0]
-            recruitment = 0
-            committment = Agent.k * self.nodes_utility.get(node.get_id())
-            if node.has_in_subtree(agent.node):
-                recruitment = Agent.h * agent.nodes_utility.get(node.get_id())
-            self.nodes_transition.update({node.get_id():[committment,recruitment,0,0,0]})
-        else:
-            # [0,0,abandonment,self_inhibition,cross_inhibition]
-            self_inhibition ,cross_inhibition = 0, 0
-            abandonment = Agent.k * (1 - self.nodes_utility.get(node.get_id()))
-            if node.has_in_subtree(agent.node) or node.has_in_siblings(agent.node):
-                self_inhibition = Agent.h * agent.nodes_utility.get(node.get_id())*np.heaviside(len(node.agents),0.75*5) # capacita del nodo provvisoria
-            if node.has_in_subtree_of_siblings(agent.node):
-                cross_inhibition = Agent.h * agent.nodes_utility.get(node.get_id())*np.heaviside(0.25*5,len(node.agents))
-            self.nodes_transition.update({node.get_id():[0,0,abandonment,self_inhibition,cross_inhibition]})
+    # udpate of the world model after control routine
+    def update(self):
+        node = self.tree.catch_node(self.position)
+        node.utility = Agent.arena.get_node_utility(node.id)
