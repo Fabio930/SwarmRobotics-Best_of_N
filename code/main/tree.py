@@ -8,7 +8,7 @@ import numpy as np
 class Tree:
 
     num_nodes = 0
-    
+
     ##########################################################################
     # standart class init
     def __init__(self, childs,depth):
@@ -103,8 +103,19 @@ class Tree:
             self.utility = self.utility/len(self.child_nodes)
         else:
             for t in self.targets:
-                self.utility +=1
+                self.utility += 1
 
+    def get_max_utility(self):
+        max = 0
+        if len(self.child_nodes) > 0:
+            for c in self.child_nodes:
+                r = c.get_max_utility()
+                if r > max:
+                    max = r
+        else:
+            for t in self.targets:
+                max += 1
+        return max
     ##########################################################################
     # erase the agent from the relative committed list
     def erase_agent(self,agent):

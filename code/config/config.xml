@@ -1,19 +1,23 @@
 <?xml version="1.0"?>
 
 <configuration>
+
     <arena
-          num_agents="10"
+          num_agents="6"
           max_steps="0"
-          num_targets="6"
+          num_targets="20"
+          MaxAgentPerNode="1"
           tree_branches="2"
           tree_depth="2"
           >
           <agent
-                k="1"
-                h=".1"
+
+                k=".8"
+                h=".2"
 
                 />
           <target
+            quality ="1"
                 />
     </arena>
 </configuration>

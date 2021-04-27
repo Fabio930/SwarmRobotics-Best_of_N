@@ -34,6 +34,7 @@ class Agent:
     arena      = None
     k = .8
     h = .2
+    size = 0.33
 
     class Factory:
         def create(self, config_element, arena): return Agent(config_element, arena)
@@ -93,6 +94,7 @@ class Agent:
             self.update_ascend_prob(random_agent,node)
         self.rand_wheel(node)
         self.new_position(node)
+        print(node.utility,'______________________________')
 
     ##########################################################################
     # generic init function brings back to initial positions
@@ -106,48 +108,50 @@ class Agent:
     ##########################################################################
     # update functions for control routine
     def update_descend_prob(self,agent,node):
-        node.committment = Agent.k * node.utility
-        if node.catch_node(agent.position) is not None:
+        print('Descending')
+        sup = Agent.arena.max_utility
+        node.committment = Agent.k *  node.utility/sup
+        print('commit',node.committment)
+        if agent.position!=self.position and node.catch_node(agent.position) is not None:
             agent_node = agent.tree.catch_node(self.position)
-            node.recruitment = Agent.h * agent_node.utility
+            node.recruitment = Agent.h * agent_node.utility/sup
 
     def update_ascend_prob(self,agent,node):
-        node.abandonment = Agent.k *(1-node.utility)
-
-        if node.catch_node(agent.position) is not None:
+        max_agent_per_node = Agent.arena.max_agent_per_node
+        sup = Agent.arena.max_utility
+        print('Ascending')
+        node.abandonment = Agent.k * (1 - node.utility/sup)
+        print('abandon',node.abandonment)
+        if self.position!=agent.position and node.catch_node(agent.position) is not None:
             agent_node = agent.tree.catch_node(self.position)
-            node.self_inhibition = Agent.h * agent_node.utility * np.heaviside(len(node.committed_agents),0.75*5)
+            node.self_inhibition = Agent.h * agent_node.utility/sup * np.heaviside(len(node.committed_agents),0.75*max_agent_per_node)
         elif node.catch_sibling(agent.position) is not None:
             agent_node = agent.tree.catch_node(self.position)
-            node.self_inhibition = Agent.h * agent_node.utility * np.heaviside(len(node.committed_agents),0.75*5)
+            node.self_inhibition = Agent.h * agent_node.utility/sup * np.heaviside(len(node.committed_agents),0.75*max_agent_per_node)
         elif node.catch_sibling_node(agent.position) is not None:
             agent_node = agent.tree.catch_node(agent.position)
-            node.cross_inhibition = Agent.h * agent_node.utility * np.heaviside(0.25*5,len(node.committed_agents))
+            node.cross_inhibition = Agent.h * agent_node.utility/sup * np.heaviside(0.25*max_agent_per_node,len(node.committed_agents))
 
     def rand_wheel(self,node):
         self.move = 0
         p = abs(np.random.uniform(0,1))
         if p < node.prob():
             self.move = 1
-        print(self.state,self.move,p,node.prob())
+        if self.move == 1:
+            print('moving')
+        else:
+            print('I stay here')
 
 
     def new_position(self,node):
+        self.prev_position = self.position
         if self.move == 1:
             if self.state == 0: # chose a random position in one of the childs_nodes if there are
                 if len(node.child_nodes) > 0:
-                    self.prev_position = self.position
                     self.position = np.random.choice(node.child_nodes).id
-                else:
-                    self.position = self.prev_position
             else: # go to parent_node
                 if node.parent_node is not None:
-                    self.prev_position = self.position
                     self.position = node.parent_node.id
-                else:
-                    self.position = self.prev_position
-        else:
-            self.position = self.prev_position
 
     def update_neighbours_position(self,agents):#cerca la posizione dei vicini salvata nel mio mondo, elimina i relativi committed_agents. POI aggiungi i committed_agents in base alle posizionni attuali
         for a in agents:
@@ -160,3 +164,12 @@ class Agent:
     def update(self):
         node = self.tree.catch_node(self.position)
         node.utility = Agent.arena.get_node_utility(node.id)
+        self.propagate_info(node)
+
+    def propagate_info(self,node):
+        if node.parent_node is not None:
+            utility = 0
+            for c in node.parent_node.child_nodes:
+                utility += c.utility
+            node.parent_node.utility = utility/len(node.parent_node.child_nodes)
+            self.propagate_info(node.parent_node)

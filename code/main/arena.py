@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import random, copy
+import random, copy,time
 import numpy as np
 from main.agent import AgentFactory
 from main.target import TargetFactory
@@ -46,10 +46,17 @@ class Arena:
         self.num_agents = int(config_element.attrib["num_agents"])
 
         # number of targets to initialize
-        if config_element.attrib.get("num_targets") is None:
-            print ("[ERROR] missing attribute 'num_targets' in tag <arena>")
-            sys.exit(2)
-        self.num_targets = int(config_element.attrib["num_targets"])
+        self.num_targets = 1
+        if config_element.attrib.get("num_targets") is not None:
+            self.num_targets = int(config_element.attrib["num_targets"])
+
+        self.max_agent_per_node = 2
+        if config_element.attrib.get("Max_agents_node") is not None:
+            self.max_agent_per_node = int(config_element.attrib["Max_agents_node"])
+            if self.max_agent_per_node < 1:
+                print ("[ERROR] invalid value for 'Max_agents_node' [1,) in tag <arena>")
+                sys.exit(2)
+
         # number of runs to execute
         self.num_runs = 1 if config_element.attrib.get("num_runs") is None else int(config_element.attrib["num_runs"])
         self.run_id = 0
@@ -59,7 +66,7 @@ class Arena:
         self.max_steps = 0 if config_element.attrib.get("max_steps") is None else int(config_element.attrib["max_steps"])
 
         # length of a simulation step (in seconds)
-        self.timestep_length = 0.1 if config_element.attrib.get("timestep_length") is None else float(config_element.attrib["timestep_length"])
+        # self.timestep_length = 0.1 if config_element.attrib.get("timestep_length") is None else float(config_element.attrib["timestep_length"])
 
         self.agents = np.array([])
         self.targets = np.array([])
@@ -79,9 +86,13 @@ class Arena:
 
         self.create_targets(config_element)
         self.rand_assign_targets()
+        self.update_utility()
+
+        time.sleep(2)
+
         self.create_agents(config_element)
         self.initialize_agents()
-        self.tree.update_tree_utility()
+
     ##########################################################################
     # create the targets
     def create_targets(self,config_element):
@@ -117,11 +128,13 @@ class Arena:
 
     ##########################################################################
     # assign targets to random leaf nodes of the acrual tree
-    def rand_assign_targets(self):
+    def rand_assign_targets(self): #quando finisce ad assegnare i target?
         for t in self.targets:
             leaf = self.tree.get_random_leaf()
             leaf.targets = np.append(leaf.targets,t)
-            print('target '+str(t.id)+' in node',leaf)
+            t.assign = leaf.id
+            print('target '+str(t.id)+' in node',leaf.id)
+
     ##########################################################################
     # assign agents to root tree of the tree and update their world representation
     def initialize_agents(self):
@@ -169,7 +182,7 @@ class Arena:
             node.committed_agents = np.append(node.committed_agents,a)
 
         self.num_steps += 1
-
+        time.sleep(.3)
 
     ##########################################################################
     # determines if an exeperiment is finished
@@ -200,3 +213,7 @@ class Arena:
 
     def get_node_utility(self,node_id):
         return self.tree.catch_node(node_id).utility
+
+    def update_utility(self):
+        self.tree.update_tree_utility()
+        self.max_utility = self.tree.get_max_utility()

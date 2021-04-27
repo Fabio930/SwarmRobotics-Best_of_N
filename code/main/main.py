@@ -3,6 +3,7 @@
 import os, random, sys, getopt, importlib
 import xml.etree.ElementTree as ET
 from main.arena import ArenaFactory
+from main.gui import GUIFactory
 
 ########################################################################################
 ## main functions

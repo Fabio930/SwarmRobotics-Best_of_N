@@ -39,22 +39,23 @@ class Target:
     # Initialisation of the Target class
     def __init__(self, config_element, arena):
 
+        self.assign = 0
         if Target.num_targets == 0:
             # reference to the arena
             Target.root = arena
-        self.quality = 0.1
+        self.quality = 1
         if config_element.attrib.get("quality") is not None:
             self.quality = float(config_element.attrib["quality"])
             if  self.quality<0:
-                print ("[ERROR] attribute 'quality' in tag <target> must be greater than 0")
+                print ("[ERROR] attribute 'quality' in tag <target> must be in [0,1]")
                 sys.exit(2)
 
-        rnd1 = np.random.normal(0.5, 0.25)
-        rnd2 = np.random.normal(0.75,0.25)
-        rnd3 = np.random.normal(1,0.25)
-        self.quality = self.quality * np.random.choice([rnd1, rnd2, rnd3])
+        rnd1 = np.random.uniform(0.5,1)
+        self.quality = self.quality * rnd1
         if self.quality < 0:
             self.quality = 0.1
+        if self.quality > 1:
+            self.quality = 1
 
         # identification
         self.id = Target.num_targets
