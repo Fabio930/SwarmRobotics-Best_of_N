@@ -13,6 +13,8 @@ class Tree:
     # standart class init
     def __init__(self, childs,depth):
 
+        self.x, self.y = 0,0
+        
         self.id = Tree.num_nodes
         self.utility = 0
 

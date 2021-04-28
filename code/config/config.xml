@@ -1,11 +1,13 @@
 <?xml version="1.0"?>
 
 <configuration>
-
+    <gui
+          pixels_per_meter="450"
+          />
     <arena
-          num_agents="6"
+          num_agents="5"
           max_steps="0"
-          num_targets="20"
+          num_targets="10"
           MaxAgentPerNode="1"
           tree_branches="2"
           tree_depth="2"

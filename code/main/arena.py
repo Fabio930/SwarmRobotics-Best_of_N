@@ -82,13 +82,15 @@ class Arena:
             if tree_depth > 1:
                 self.tree_depth = tree_depth
 
+        self.num_nodes = 0
+        for i in range(self.tree_depth+1):
+            self.num_nodes += self.tree_branches**i
+
         self.tree = Tree(self.tree_branches,self.tree_depth)
 
         self.create_targets(config_element)
         self.rand_assign_targets()
         self.update_utility()
-
-        time.sleep(2)
 
         self.create_agents(config_element)
         self.initialize_agents()
@@ -182,7 +184,7 @@ class Arena:
             node.committed_agents = np.append(node.committed_agents,a)
 
         self.num_steps += 1
-        time.sleep(.3)
+        time.sleep(.01)
 
     ##########################################################################
     # determines if an exeperiment is finished

@@ -94,7 +94,7 @@ class Agent:
             self.update_ascend_prob(random_agent,node)
         self.rand_wheel(node)
         self.new_position(node)
-        print(node.utility,'______________________________')
+        print('node utility',node.utility,'\n______________________________')
 
     ##########################################################################
     # generic init function brings back to initial positions
