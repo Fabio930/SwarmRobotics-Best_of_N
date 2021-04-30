@@ -50,11 +50,18 @@ class Arena:
         if config_element.attrib.get("num_targets") is not None:
             self.num_targets = int(config_element.attrib["num_targets"])
 
-        self.max_agent_per_node = 2
-        if config_element.attrib.get("Max_agents_node") is not None:
-            self.max_agent_per_node = int(config_element.attrib["Max_agents_node"])
-            if self.max_agent_per_node < 1:
-                print ("[ERROR] invalid value for 'Max_agents_node' [1,) in tag <arena>")
+        self.max_agents_per_node = 10
+        if config_element.attrib.get("MaxAgentPerNode") is not None:
+            self.max_agents_per_node = int(config_element.attrib["MaxAgentPerNode"])
+            if self.max_agents_per_node < 1:
+                print ("[ERROR] invalid value for 'MaxAgentPerNode' [1,) in tag <arena>")
+                sys.exit(2)
+
+        self.max_targets_per_node = 5
+        if config_element.attrib.get("MaxTargetPerNode") is not None:
+            self.max_targets_per_node = int(config_element.attrib["MaxTargetPerNode"])
+            if self.max_targets_per_node < 1:
+                print ("[ERROR] invalid value for 'MaxTargetPerNode' [1,) in tag <arena>")
                 sys.exit(2)
 
         # number of runs to execute
@@ -76,6 +83,7 @@ class Arena:
             tree_branches = int(config_element.attrib["tree_branches"])
             if tree_branches > 2:
                 self.tree_branches = tree_branches
+
         self.tree_depth = 1
         if config_element.attrib.get("tree_depth") is not None:
             tree_depth = int(config_element.attrib["tree_depth"])
@@ -89,8 +97,8 @@ class Arena:
         self.tree = Tree(self.tree_branches,self.tree_depth)
 
         self.create_targets(config_element)
-        self.rand_assign_targets()
-        self.update_utility()
+        self.assign_targets()
+        self.tree.update_tree_utility()
 
         self.create_agents(config_element)
         self.initialize_agents()
@@ -129,13 +137,15 @@ class Arena:
             self.agents = np.append(self.agents,AgentFactory.create_agent(agent_config, self))
 
     ##########################################################################
-    # assign targets to random leaf nodes of the acrual tree
-    def rand_assign_targets(self): #quando finisce ad assegnare i target?
+    # assign targets to the first node
+    def assign_targets(self):
         for t in self.targets:
-            leaf = self.tree.get_random_leaf()
-            leaf.targets = np.append(leaf.targets,t)
-            t.assign = leaf.id
-            print('target '+str(t.id)+' in node',leaf.id)
+            while t.assign==0:
+                leaf = self.tree.get_random_leaf()
+                if len(leaf.targets) < self.max_targets_per_node:
+                    leaf.targets = np.append(leaf.targets,t)
+                    t.assign = leaf.id
+                    print('target '+str(t.id)+' in node',leaf.id)
 
     ##########################################################################
     # assign agents to root tree of the tree and update their world representation
@@ -144,6 +154,7 @@ class Arena:
             self.tree.committed_agents = np.append(self.tree.committed_agents,a)
         for a in self.agents:
             a.tree = self.get_tree_copy()
+
     ##########################################################################
     # set the random seed
     def set_random_seed( self, seed = None ):
@@ -167,7 +178,6 @@ class Arena:
         while not self.experiment_finished():
             self.update()
 
-
     ##########################################################################
     # updates the simulation state
     def update( self ):
@@ -184,20 +194,16 @@ class Arena:
             node.committed_agents = np.append(node.committed_agents,a)
 
         self.num_steps += 1
-        time.sleep(.01)
-
     ##########################################################################
     # determines if an exeperiment is finished
     def experiment_finished( self):
 
         return (self.max_steps > 0) and (self.max_steps <= self.num_steps)
 
-
     ##########################################################################
     # save results to file, if any
     def save_results( self ):
         return None
-
 
     ##########################################################################
     # return the list of agents
@@ -215,7 +221,3 @@ class Arena:
 
     def get_node_utility(self,node_id):
         return self.tree.catch_node(node_id).utility
-
-    def update_utility(self):
-        self.tree.update_tree_utility()
-        self.max_utility = self.tree.get_max_utility()

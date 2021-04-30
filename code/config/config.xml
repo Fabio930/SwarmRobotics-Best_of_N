@@ -5,17 +5,18 @@
           pixels_per_meter="450"
           />
     <arena
-          num_agents="5"
+          num_agents="8"
           max_steps="0"
-          num_targets="10"
-          MaxAgentPerNode="1"
+          num_targets="9"
+          MaxAgentPerNode="12"
+          MaxTargetPerNode="6"
           tree_branches="2"
-          tree_depth="2"
+          tree_depth="1"
           >
           <agent
 
-                k=".8"
-                h=".2"
+                k=".3"
+                h=".3"
 
                 />
           <target
@@ -23,3 +24,7 @@
                 />
     </arena>
 </configuration>
+
+    <!-- #test con albero binario utilata variabili
+    #test con albero ennario un utilità massima e le altre uguali ma minori
+    #testare r=h/k -->
