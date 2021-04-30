@@ -98,10 +98,10 @@ class Arena:
 
         self.create_targets(config_element)
         self.assign_targets()
-        self.tree.update_tree_utility()
-
         self.create_agents(config_element)
         self.initialize_agents()
+        self.tree.update_tree_utility()
+
 
     ##########################################################################
     # create the targets
@@ -211,7 +211,8 @@ class Arena:
         neighbour_list = []
         for a in self.agents:
             if a is not agent :
-                neighbour_list.append(a)
+                if agent.is_neighbour(a):
+                    neighbour_list.append(a)
         return neighbour_list
 
     ##########################################################################

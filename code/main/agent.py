@@ -35,9 +35,8 @@ class Agent:
     k = .8
     h = .2
     size = 0.33
-
-    max_targets_per_node = 0
-    max_agents_per_node = 0
+    P_a = 0.5
+    P_d = 0.5
 
     class Factory:
         def create(self, config_element, arena): return Agent(config_element, arena)
@@ -54,8 +53,21 @@ class Agent:
 
             # reference to the arena
             Agent.arena = arena
-            Agent.max_targets_per_node = arena.max_targets_per_node
-            Agent.max_agents_per_node = arena.max_agents_per_node
+            if config_element.attrib.get("prob_ascend") is not None:
+                a = float(config_element.attrib["prob_ascend"])
+                if a < 0 or a >1:
+                    print ("[ERROR] for tag <agent> in configuration file the parameter <prob_ascend> should be in [0,1]")
+                    sys.exit(2)
+                Agent.P_a = a
+            if config_element.attrib.get("prob_descend") is not None:
+                d = float(config_element.attrib["prob_descend"])
+                if d < 0 or d >1:
+                    print ("[ERROR] for tag <agent> in configuration file the parameter <prob_descend> should be in [0,1]")
+                    sys.exit(2)
+                Agent.P_d = d
+            if Agent.P_a + Agent.P_d > 1:
+                print ("[ERROR] for tag <agent> in configuration file the sum <prob_ascend+prob_descend> should be in [0,1]")
+                sys.exit(2)
 
             if config_element.attrib.get("k") is not None:
                 k = float(config_element.attrib["k"])
@@ -70,7 +82,7 @@ class Agent:
                     sys.exit(2)
                 Agent.h = h
             if Agent.h + Agent.k > 1:
-                print ("[ERROR] for tag <agent> in configuration file the parameter <h+k> should be in (0,1]")
+                print ("[ERROR] for tag <agent> in configuration file the sum <h+k> should be in (0,1]")
                 sys.exit(2)
 
         # state (0=descending,1=ascending)
@@ -87,19 +99,6 @@ class Agent:
         Agent.num_agents += 1
 
     ##########################################################################
-    # compute the desired motion and the next state of the agent
-    def control(self):
-        print("Agent "+str(self.id)+" is in node "+str(self.position))
-        node = self.tree.catch_node(self.position) # nodo attuale
-        neighbours = Agent.arena.get_neighbour_agents(self)
-        self.update_neighbours_position(neighbours)
-        self.state = np.random.randint(2)
-        if self.state == 0:
-            self.descending(neighbours,node)
-        else:
-            self.ascending(neighbours,node)
-
-    ##########################################################################
     # generic init function brings back to initial positions
     def init_experiment( self ):
         self.tree = copy.deepcopy(self.init_tree)
@@ -108,57 +107,39 @@ class Agent:
         self.prev_position = 0
 
     ##########################################################################
-    # functions for control routine
-    def descending(self,agents,node):
-        self.prev_position = self.position
+    # update the utilities of the world model and choose the next state of the agent
+    def control(self):
+        print("Agent "+str(self.id)+" is in node "+str(self.position))
+        node = self.tree.catch_node(self.position)
+        node.utility = Agent.arena.get_node_utility(node.id)
+        self.update_world_utilities(node)
+        if self.state == 0 and np.random.uniform(0,1) < Agent.P_a:
+            self.state = 1
+        elif self.state ==1 and np.random.uniform(0,1) < Agent.P_d:
+            self.state = 0
 
-        if len(node.child_nodes) > 0:
-            selected_node = np.random.choice(node.child_nodes)
-            p = abs(np.random.uniform(0,1))
-
-            committment = Agent.k *  selected_node.utility/Agent.max_targets_per_node
-            recruitment = 0
-            agent = np.random.choice(agents)
-            # se l'agente si trova nel sotto-albero del mio nodo uso le sue informazioni
-            # sulla zona da cui raggiungerlo per il recruitment
-            agent_node = node.get_sub_node(agent.position)
-
-            if agent_node is not None:
-                recruitment = Agent.h * agent.tree.catch_node(agent_node.id).utility/Agent.max_targets_per_node
-
-            if p < committment:
-                self.position = selected_node.id
-            # se sono reclutato mi muovo nella direzione dell'agente
-            elif agent_node is not None and p < committment + recruitment:
-                self.position = agent_node.id
-
-    def ascending(self,agents,node):
-        self.prev_position = self.position
-
+    ##########################################################################
+    def update_world_utilities(self,node):
         if node.parent_node is not None:
-            agent = np.random.choice(agents)
-            p = abs(np.random.uniform(0,1))
+            utility = 0
+            for c in node.parent_node.child_nodes:
+                utility += c.utility
+            node.parent_node.utility = utility/len(node.parent_node.child_nodes)
+            self.update_world_utilities(node.parent_node)
 
-            # abandonment basato sull'utilità del nodo corrente
-            abandonment = 0 #Agent.k *(1-node.utility/Agent.max_targets_per_node)
-            self_inhibition,cross_inhibition = 0,0
-            agent_node = node.get_sibling_node(agent.position)
+    ##########################################################################
+    # udpate the position
+    def update(self):
+        node = self.tree.catch_node(self.position) # nodo attuale
+        neighbours = Agent.arena.get_neighbour_agents(self)
+        self.update_neighbours_position(neighbours)
+        if self.state == 0:
+            self.descending(neighbours,node)
+        else:
+            self.ascending(neighbours,node)
+        print("Agent "+str(self.id)+" is moving from "+str(self.prev_position)+" to "+str(self.position))
 
-            # se l'agente si trova nel mio stesso nodo o in un nodo inferiore
-            # uso le sue informazioni sulla mia posizione per la self_inhibition
-            if node.catch_node(agent.position) is not None:
-                if len(node.committed_agents) > 0.75*Agent.max_agents_per_node:
-                    self_inhibition = 0 #Agent.h * agent.tree.catch_node(self.position).utility/Agent.max_targets_per_node
-
-            # se l'agente si trova in un nodo con il nodo parente in comune al mio o nei relativi sotto-alberi
-            # uso le sue informazioni sulla posizione con nodo parente in comune per la cross_inhibition
-            elif agent_node is not None:
-                if 0.25*Agent.max_agents_per_node > len(agent_node.committed_agents):
-                    cross_inhibition = Agent.h * agent.tree.catch_node(agent_node.id).utility/Agent.max_targets_per_node
-
-            if p < abandonment + self_inhibition + cross_inhibition:
-                self.position = node.parent_node.id
-
+    ##########################################################################
     def update_neighbours_position(self,agents):
         for a in agents:
             self.tree.erase_agent(a)
@@ -166,16 +147,67 @@ class Agent:
             node.committed_agents = np.append(node.committed_agents,a)
 
     ##########################################################################
-    # udpate of the world model after control routine
-    def update(self):
-        node = self.tree.catch_node(self.position)
-        node.utility = Agent.arena.get_node_utility(node.id)
-        self.update_utilities(node)
+    def descending(self,agents,node):
+        self.prev_position = self.position
+        print("descending")
 
-    def update_utilities(self,node):
+        if len(node.child_nodes) > 0:
+            selected_node = np.random.choice(node.child_nodes)
+            committment = Agent.k *  node.utility/Agent.arena.max_targets_per_node
+            agent_node = None
+            if len(agents) > 0:
+                agent = np.random.choice(agents)
+                agent_node = node.get_sub_node(agent.position)
+            recruitment = 0
+            # se l'agente si trova nel sotto-albero del mio nodo uso le sue informazioni
+            # sulla zona da cui raggiungerlo per il recruitment
+            if agent_node is not None:
+                recruitment = Agent.h * agent.tree.catch_node(self.position).utility/Agent.arena.max_targets_per_node
+            p = np.random.uniform(0,1)
+            if p < committment:
+                self.position = selected_node.id
+                print("committed")
+                print(p,committment,recruitment,'+++')
+            # se sono reclutato mi muovo nella direzione dell'agente
+            elif p < committment + recruitment:
+                self.position = agent_node.id
+                print("recruited")
+                print(p,committment,recruitment,'+++')
+
+    def ascending(self,agents,node):
+        self.prev_position = self.position
+        print("ascending")
+
         if node.parent_node is not None:
-            utility = 0
-            for c in node.parent_node.child_nodes:
-                utility += c.utility
-            node.parent_node.utility = utility/len(node.parent_node.child_nodes)
-            self.update_utilities(node.parent_node)
+            abandonment = 0 #Agent.k *(1-node.utility/Agent.arena.max_targets_per_node)
+            agent_node_self = None
+            agent_node_cross = None
+            if len(agents) > 0:
+                agent = np.random.choice(agents)
+                agent_node_self = node.catch_node(agent.position)
+                agent_node_cross = node.get_sibling_node(agent.position)
+            self_inhibition,cross_inhibition = 0,0
+            # se l'agente si trova nel mio stesso nodo o in un nodo inferiore
+            # uso le sue informazioni sulla mia posizione per la self_inhibition
+            if agent_node_self is not None:
+                self_inhibition = 0 #Agent.h * agent.tree.catch_node(self.position).utility/Agent.arena.max_targets_per_node
+            # se l'agente si trova in un nodo con il nodo parente in comune al mio o nei relativi sotto-alberi
+            # uso le sue informazioni sulla posizione con nodo parente in comune per la cross_inhibition
+            elif agent_node_cross is not None:
+                cross_inhibition = Agent.h * agent.tree.catch_node(agent_node_cross.id).utility/Agent.arena.max_targets_per_node
+            p = np.random.uniform(0,1)
+            if p < abandonment + self_inhibition + cross_inhibition:
+                self.position = node.parent_node.id
+                print("inhibited")
+                print(p,cross_inhibition,'---')
+
+    def is_neighbour(self,agent):
+        node = self.tree.catch_node(self.position)
+        if node.catch_node(agent.position) is not None:
+            return True
+        elif node.parent_node is not None:
+            if node.parent_node.id == agent.position:
+                return True
+            elif node.get_sibling_node(agent.position) is not None:
+                return True
+        return False

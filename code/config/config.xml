@@ -5,17 +5,16 @@
           pixels_per_meter="450"
           />
     <arena
-          num_agents="8"
+          num_agents="7"
           max_steps="0"
-          num_targets="9"
-          MaxAgentPerNode="12"
-          MaxTargetPerNode="6"
+          num_targets="3"
+          MaxTargetPerNode="2"
           tree_branches="2"
           tree_depth="1"
           >
           <agent
 
-                k=".3"
+                k=".7"
                 h=".3"
 
                 />

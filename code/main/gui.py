@@ -162,8 +162,8 @@ class PysageGUI(object):
         self.w.pack()
         self.length = self.pixels_per_meter/(5*self.arena.tree_depth*self.arena.tree_branches)
         agent_halfsize = int(Agent.size*self.length)
-        x1, y1 = agent_halfsize, self.pixels_per_meter*0.0001 + agent_halfsize
-        x2, y2 = agent_halfsize + self.length, self.pixels_per_meter*0.0001 + self.length + agent_halfsize
+        x1, y1 = agent_halfsize*2, self.pixels_per_meter*0.0001 + agent_halfsize*2
+        x2, y2 = agent_halfsize*2 + self.length, self.pixels_per_meter*0.0001 + self.length + agent_halfsize*2
         node = self.tree.catch_node(0)
         node.x,node.y = x1,y1
         self.nodes_id[0] = self.w.create_oval(x1,y1,x2,y2, fill="white")
@@ -213,7 +213,6 @@ class PysageGUI(object):
                 node = self.tree.catch_node(len(self.nodes_x))
                 node.x,node.y = x1,y1
                 self.nodes_x = np.append(self.nodes_x,x1)
-                print(node.id,len(self.nodes_id))
                 self.nodes_id[node.id]= self.w.create_oval(x1,y1,x2,y2, fill="white")
                 self.paint_util(depth-1,x2,y2,r)
                 for i in range(len(node.targets)):
