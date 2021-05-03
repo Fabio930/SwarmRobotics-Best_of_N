@@ -4,7 +4,7 @@ import os, random, sys, getopt, importlib
 import xml.etree.ElementTree as ET
 from main.arena import ArenaFactory
 from main.gui import GUIFactory
-
+from main.results import Results
 ########################################################################################
 ## main functions
 ########################################################################################
@@ -49,7 +49,7 @@ def start(argv):
         importlib.import_module(".arena",lib_pkg)
 
     arena = ArenaFactory.create_arena(arena_config)
-
+    results = Results(arena)
     gui_config = tree.getroot().find('gui')
     if gui_config is not None: #original file - used for GUI
         global tk
@@ -80,8 +80,11 @@ def start(argv):
                 arena.set_random_seed(arena.run_id)
             arena.init_experiment()
             arena.run_experiment()
-            arena.save_results()
-
+            results.update()
+        if num_runs >= arena.num_runs:
+            results.print_mean_on_file()
+            if arena.agents[0].h/arena.agents[0].k == 9:
+                results.plots()
 if __name__ == "__main__":
     start(sys.argv[1:])
 

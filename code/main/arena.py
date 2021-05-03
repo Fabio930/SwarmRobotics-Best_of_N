@@ -50,13 +50,6 @@ class Arena:
         if config_element.attrib.get("num_targets") is not None:
             self.num_targets = int(config_element.attrib["num_targets"])
 
-        self.max_agents_per_node = 10
-        if config_element.attrib.get("MaxAgentPerNode") is not None:
-            self.max_agents_per_node = int(config_element.attrib["MaxAgentPerNode"])
-            if self.max_agents_per_node < 1:
-                print ("[ERROR] invalid value for 'MaxAgentPerNode' [1,) in tag <arena>")
-                sys.exit(2)
-
         self.max_targets_per_node = 5
         if config_element.attrib.get("MaxTargetPerNode") is not None:
             self.max_targets_per_node = int(config_element.attrib["MaxTargetPerNode"])
@@ -71,9 +64,6 @@ class Arena:
         # current simulation step and max number of simulation steps - 0 means no limits
         self.num_steps = 0
         self.max_steps = 0 if config_element.attrib.get("max_steps") is None else int(config_element.attrib["max_steps"])
-
-        # length of a simulation step (in seconds)
-        # self.timestep_length = 0.1 if config_element.attrib.get("timestep_length") is None else float(config_element.attrib["timestep_length"])
 
         self.agents = np.array([])
         self.targets = np.array([])
@@ -101,7 +91,6 @@ class Arena:
         self.create_agents(config_element)
         self.initialize_agents()
         self.tree.update_tree_utility()
-
 
     ##########################################################################
     # create the targets
@@ -141,19 +130,22 @@ class Arena:
     def assign_targets(self):
         for t in self.targets:
             while t.assign==0:
-                leaf = self.tree.get_random_leaf()
-                if len(leaf.targets) < self.max_targets_per_node:
-                    leaf.targets = np.append(leaf.targets,t)
-                    t.assign = leaf.id
-                    print('target '+str(t.id)+' in node',leaf.id)
+                leaf = self.tree.catch_node(1)
+                if len(leaf.targets) >= self.max_targets_per_node:
+                    leaf = self.tree.catch_node(2)
+                leaf.targets = np.append(leaf.targets,t)
+                t.assign = leaf.id
+                print('target '+str(t.id)+' in node',leaf.id)
 
     ##########################################################################
     # assign agents to root tree of the tree and update their world representation
     def initialize_agents(self):
+        print("Initializing agents")
         for a in self.agents:
             self.tree.committed_agents = np.append(self.tree.committed_agents,a)
         for a in self.agents:
             a.tree = self.get_tree_copy()
+        print(str(self.num_agents)+' Agents initialized in the root node')
 
     ##########################################################################
     # set the random seed
@@ -168,6 +160,7 @@ class Arena:
     ##########################################################################
     # initialisation/reset of the experiment variables
     def init_experiment( self ):
+        print('Experiment started')
         self.num_steps = 0
         for agent in self.agents:
             agent.init_experiment()
@@ -175,6 +168,7 @@ class Arena:
     ##########################################################################
     # run experiment until finished
     def run_experiment( self ):
+        print('Running')
         while not self.experiment_finished():
             self.update()
 
@@ -194,25 +188,27 @@ class Arena:
             node.committed_agents = np.append(node.committed_agents,a)
 
         self.num_steps += 1
+
     ##########################################################################
     # determines if an exeperiment is finished
     def experiment_finished( self):
-
-        return (self.max_steps > 0) and (self.max_steps <= self.num_steps)
-
-    ##########################################################################
-    # save results to file, if any
-    def save_results( self ):
-        return None
+        if (self.max_steps > 0) and (self.max_steps <= self.num_steps):
+            print("Run finished")
+            return 1
 
     ##########################################################################
     # return the list of agents
-    def get_neighbour_agents( self, agent ):
+    def get_neighbour_agents( self, agent, ref=0):
         neighbour_list = []
-        for a in self.agents:
-            if a is not agent :
-                if agent.is_neighbour(a):
+        if ref == 0:
+            for a in self.agents:
+                if a is not agent :
                     neighbour_list.append(a)
+        else:
+            for a in self.agents:
+                if a is not agent :
+                    if agent.is_neighbour(a):
+                        neighbour_list.append(a)
         return neighbour_list
 
     ##########################################################################

@@ -46,9 +46,9 @@ class PysageGUI(object):
         # Initialize the arena and the agents
         self.arena = arena
         self.tree = arena.get_tree_copy()
-        self.agents_id = [0]*self.arena.num_agents;
+        self.agents_id = [0]*self.arena.num_agents
         self.nodes_id =  [0]*self.arena.num_nodes
-        self.targets_id = [0]*self.arena.num_targets
+        self.utility_id = [0]*self.arena.num_nodes
         self.nodes_x = np.array([]) # just for placement of nodes on the screen
         self.arena.set_random_seed()
         self.arena.init_experiment()
@@ -167,6 +167,8 @@ class PysageGUI(object):
         node = self.tree.catch_node(0)
         node.x,node.y = x1,y1
         self.nodes_id[0] = self.w.create_oval(x1,y1,x2,y2, fill="white")
+        self.w.create_rectangle(x2+2,y1,x2+12,y2,fill="white", outline="black")
+        self.utility_id[0] = self.w.create_rectangle(x2+2, agent_halfsize*2 + y2*(1 - node.utility/self.arena.max_targets_per_node),x2+12,y2,fill="black")
         self.nodes_x = np.append(self.nodes_x,x1)
         self.paintTree(self.arena.tree_depth,x2,y2)
 
@@ -174,9 +176,8 @@ class PysageGUI(object):
             agent_halfsize = int(Agent.size*self.length)
             agent_tag = "agent_%d" % a.id
             node = self.tree.catch_node(a.position)
-            self.agents_id[a.id] = self.w.create_oval(node.x-agent_halfsize+a.id,node.y-agent_halfsize,node.x+agent_halfsize+a.id,node.y+agent_halfsize, fill="blue", tags=(agent_tag))
+            self.agents_id[a.id] = self.w.create_oval(node.x+self.length/2-agent_halfsize,node.y+self.length/2-agent_halfsize,node.x+self.length/2+agent_halfsize,node.y+self.length/2+agent_halfsize, fill="blue", tags=(agent_tag))
             self.w.tag_bind(agent_tag, "<ButtonPress-1>", lambda event, agent_tag = agent_tag: self.agent_selected(event, agent_tag))
-
 
     # #########################################################################
     # GUI draw function: standard draw of the arena and of the agent
@@ -185,22 +186,28 @@ class PysageGUI(object):
         for a in self.arena.agents:
             node = self.tree.catch_node(a.position)
             agent_halfsize = int(Agent.size*self.length)
-            self.w.coords(self.agents_id[a.id], (node.x-agent_halfsize+a.id,node.y-agent_halfsize,node.x+agent_halfsize+a.id,node.y+agent_halfsize))
+            self.w.coords(self.agents_id[a.id], (node.x+self.length/2-agent_halfsize,node.y+self.length/2-agent_halfsize,node.x+self.length/2+agent_halfsize,node.y+self.length/2+agent_halfsize))
 
     def paintTree(self,depth,x2,y2):
         agent_halfsize = int(Agent.size*self.length)
         y1 = y2 + 5
         y2 = y1 + self.length
         for b in range(self.arena.tree_branches):
-            x1 = self.length + np.take(self.nodes_x,-1)
-            x2 = x1 + self.length
+            if b == 0:
+                x1 = self.length + np.take(self.nodes_x,-1)
+                x2 = x1 + self.length
+            else:
+                x1 = self.length + np.take(self.nodes_x,-1) + 14
+                x2 = x1 + self.length
+
             node = self.tree.catch_node(len(self.nodes_x))
             node.x,node.y = x1,y1
             self.nodes_x = np.append(self.nodes_x,x1)
             self.nodes_id[node.id]= self.w.create_oval(x1,y1,x2,y2, fill="white")
+            self.w.create_rectangle(x2+2,y1,x2+12,y2,fill="white", outline="black")
+            self.utility_id[0] = self.w.create_rectangle(x2+2, y1 + (y2-y1)*(1 - node.utility/self.arena.max_targets_per_node),x2+12,y2,fill="black")
             self.paint_util(depth-1,x2,y2,b)
-            for i in range(len(node.targets)):
-                self.targets_id[node.targets[i].id] = self.w.create_oval(node.x-agent_halfsize+i,node.y-agent_halfsize+self.length,node.x+agent_halfsize+i,node.y+agent_halfsize+self.length,fill="green")
+            # uso l'utilità del nodo, barra colorata
 
     def paint_util(self,depth,x2,y2,r):
         agent_halfsize = int(Agent.size*self.length)
@@ -208,17 +215,15 @@ class PysageGUI(object):
             y1 = y2 + 5
             y2 = y1 + self.length
             for b in range(self.arena.tree_branches):
-                x1 = self.length + np.take(self.nodes_x,-1)
+                x1 = self.length + np.take(self.nodes_x,-1) + 14
                 x2 = x1 + self.length
                 node = self.tree.catch_node(len(self.nodes_x))
                 node.x,node.y = x1,y1
                 self.nodes_x = np.append(self.nodes_x,x1)
                 self.nodes_id[node.id]= self.w.create_oval(x1,y1,x2,y2, fill="white")
+                self.w.create_rectangle(x2+2,y1,x2+12,y2,fill="white", outline="black")
+                self.utility_id[0] = self.w.create_rectangle(x2+2,  y1 + (y2-y1)*(1 - node.utility/self.arena.max_targets_per_node),x2+12,y2,fill="black")
                 self.paint_util(depth-1,x2,y2,r)
-                for i in range(len(node.targets)):
-                    self.targets_id[node.targets[i].id] = self.w.create_oval(node.x-agent_halfsize+i,node.y-agent_halfsize+self.length,node.x+agent_halfsize+i,node.y+agent_halfsize+self.length,fill="green")
-
-
 
     ##########################################################################
     # de-select an agent that was previously selected by a click

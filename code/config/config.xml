@@ -1,21 +1,22 @@
 <?xml version="1.0"?>
 
 <configuration>
-    <gui
-          pixels_per_meter="450"
-          />
+    <!-- <gui
+          pixels_per_meter="900"
+          /> -->
     <arena
-          num_agents="7"
-          max_steps="0"
-          num_targets="3"
-          MaxTargetPerNode="2"
+          num_agents="8"
+          max_steps="200"
+          num_targets="20"
+          num_runs="10"
+          MaxTargetPerNode="15"
           tree_branches="2"
           tree_depth="1"
           >
           <agent
 
-                k=".7"
-                h=".3"
+                k=".8"
+                h=".2"
 
                 />
           <target
@@ -23,7 +24,3 @@
                 />
     </arena>
 </configuration>
-
-    <!-- #test con albero binario utilata variabili
-    #test con albero ennario un utilità massima e le altre uguali ma minori
-    #testare r=h/k -->

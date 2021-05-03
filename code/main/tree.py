@@ -50,6 +50,7 @@ class Tree:
                     return child
         return None
 
+    ##########################################################################
     def get_sub_node(self,node_id):
         for c in self.child_nodes:
             if c.catch_node(node_id) is not None:
@@ -62,6 +63,7 @@ class Tree:
                 if c.catch_node(node_id) is not None:
                     return c
         return None
+
     ##########################################################################
     # updates the node utility looking at the utilities of the sub-tree
     def update_tree_utility(self):
