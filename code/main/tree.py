@@ -11,29 +11,29 @@ class Tree:
 
     ##########################################################################
     # standart class init
-    def __init__(self, childs,depth):
+    def __init__(self, num_childs,depth,num_agents):
 
         self.x, self.y = 0,0
 
         self.id = Tree.num_nodes
         self.utility = 0
 
-        self.committed_agents = np.array([])
+        self.committed_agents = [None]*num_agents
         self.targets =  np.array([])
 
         self.parent_node = None
-        self.child_nodes = np.array([])
+        self.child_nodes = [None]*num_childs
         if depth > 0:
-            for c in range(childs):
+            for c in range(num_childs):
                 Tree.num_nodes += 1
-                child = Tree(childs,depth-1)
+                child = Tree(num_childs,depth-1,num_agents)
                 child.parent_node = self
-                self.child_nodes = np.append(self.child_nodes,child)
+                self.child_nodes[c] = child
 
     ##########################################################################
     #  returns a random leaf from the relative sub_tree
     def get_random_leaf(self):
-        if len(self.child_nodes) > 0:
+        if self.child_nodes[0] is not None:
             return np.random.choice(self.child_nodes).get_random_leaf()
         return self
 
@@ -43,7 +43,7 @@ class Tree:
     def catch_node(self,node_id):
         if self.id == node_id:
             return self
-        if len(self.child_nodes) > 0:
+        if self.child_nodes[0] is not None:
             for c in self.child_nodes:
                 child = c.catch_node(node_id)
                 if child is not None:
@@ -68,7 +68,7 @@ class Tree:
     # updates the node utility looking at the utilities of the sub-tree
     def update_tree_utility(self):
         self.utility = 0
-        if len(self.child_nodes) > 0:
+        if self.child_nodes[0] is not None:
             for c in self.child_nodes:
                 c.update_tree_utility()
                 self.utility += c.utility
@@ -78,15 +78,17 @@ class Tree:
                 self.utility += 1
 
     ##########################################################################
-    # erase the agent from the relative committed list
-    def erase_agent(self,agent):
-        flag = None
-        for i in range(len(self.committed_agents)):
-            if self.committed_agents[i].id == agent.id:
-                flag = i
-        if flag is not None:
-            self.committed_agents = np.delete(self.committed_agents,flag)
-        else:
-            if len(self.child_nodes) > 0:
-                for c in self.child_nodes:
-                    c.erase_agent(agent)
+    # check if all agents are in the same node
+    def check_finish_condt(self):
+        if self.id > 0:
+            sum = 0
+            for a in self.committed_agents:
+                if a is not None:
+                    sum += 1
+            if sum == len(self.committed_agents):
+                return True
+        if self.child_nodes[0] is not None:
+            for c in self.child_nodes:
+                if c.check_finish_condt():
+                    return True
+        return False

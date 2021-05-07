@@ -83,8 +83,6 @@ def start(argv):
             results.update()
         if num_runs >= arena.num_runs:
             results.print_mean_on_file()
-            if arena.agents[0].h/arena.agents[0].k == 9:
-                results.plots()
 if __name__ == "__main__":
     start(sys.argv[1:])
 

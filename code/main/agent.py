@@ -31,6 +31,7 @@ class AgentFactory:
 # the main agent class
 class Agent:
 
+    mode = 'normal'
     num_agents = 0
     arena      = None
     k = .3
@@ -50,9 +51,13 @@ class Agent:
         self.id = Agent.num_agents
 
         if self.id == 0:
-
+            # select the mode ('normal' or 'log')
+            if config_element.attrib.get("mode") is not None:
+                if config_element.attrib.get("mode") == 'log':
+                    Agent.mode = 'log'
             # reference to the arena
             Agent.arena = arena
+            # agent class' attributes
             if config_element.attrib.get("prob_ascend") is not None:
                 a = float(config_element.attrib["prob_ascend"])
                 if a < 0 or a >1:
@@ -68,7 +73,6 @@ class Agent:
             if Agent.P_a + Agent.P_d > 1:
                 print ("[ERROR] for tag <agent> in configuration file the sum <prob_ascend+prob_descend> should be in [0,1]")
                 sys.exit(2)
-
             if config_element.attrib.get("k") is not None:
                 k = float(config_element.attrib["k"])
                 if k<=0 or k>1:
@@ -98,11 +102,12 @@ class Agent:
 
         Agent.num_agents += 1
 
-        lg.basicConfig(filename='history.log',
-                    filemode='a',
-                    format='%(asctime)s - %(levelname)s: %(message)s',
-                    datefmt='%H:%M:%S',
-                    level=lg.INFO)
+        if Agent.mode == 'log':
+            lg.basicConfig(filename='history.log',
+                        filemode='a',
+                        format='%(asctime)s - %(levelname)s: %(message)s',
+                        datefmt='%H:%M:%S',
+                        level= lg.INFO)
 
     ##########################################################################
     # generic init function brings back to initial positions
@@ -115,7 +120,7 @@ class Agent:
     ##########################################################################
     # update the utilities of the world model and choose the next state of the agent
     def control(self):
-        lg.info(f'Agent #{self.id} is in node {self.position} with state {self.state}.')
+        # lg.info(f'Agent #{self.id} is in node {self.position} with state {self.state}.')
         node = self.tree.catch_node(self.position)
         node.utility = Agent.arena.get_node_utility(node.id)
         self.update_world_utilities(node)
@@ -123,8 +128,12 @@ class Agent:
             self.state = 1
         elif self.state ==1 and np.random.uniform(0,1) < Agent.P_d:
             self.state = 0
-        lg.info(f'Agent #{self.id} is in new state {self.state}.')
+
+        if Agent.mode == 'log':
+            lg.info(f'Agent #{self.id} is in new state {self.state}.')
+
     ##########################################################################
+    # propagates the info gathered in the current node to the parent nodes
     def update_world_utilities(self,node):
         if node.parent_node is not None:
             utility = 0
@@ -134,7 +143,7 @@ class Agent:
             self.update_world_utilities(node.parent_node)
 
     ##########################################################################
-    # udpate the position
+    # save position and choose a new one
     def update(self):
         self.prev_position = self.position
         node = self.tree.catch_node(self.position)
@@ -146,16 +155,21 @@ class Agent:
             self.ascending(neighbours,node)
 
     ##########################################################################
+    # updates the agent position in the tree structure
     def update_neighbours_position(self,agents):
         for a in agents:
-            self.tree.erase_agent(a)
+            prev_node = self.tree.catch_node(a.prev_position)
+            prev_node.committed_agents[a.id] = None
             node = self.tree.catch_node(a.position)
-            node.committed_agents = np.append(node.committed_agents,a)
-        lg.info(f'Agent #{self.id} from node {self.position} sees {len(agents)} agents.')
+            node.committed_agents[a.id] = a
+
+        if Agent.mode == 'log':
+            lg.info(f'Agent #{self.id} from node {self.position} sees {len(agents)} agents.')
 
     ##########################################################################
+    # descending transition
     def descending(self,agents,node):
-        if len(node.child_nodes) > 0:
+        if node.child_nodes[0] is not None:
             selected_node = np.random.choice(node.child_nodes)
             committment = Agent.k * Agent.arena.get_node_utility(selected_node.id)/Agent.arena.max_targets_per_node
             agent_node = None
@@ -168,14 +182,20 @@ class Agent:
             p = np.random.uniform(0,1)
             if p < committment:
                 self.position = selected_node.id
-                lg.info(f'Agent #{self.id} in node {self.prev_position} is committed to node {selected_node.id}.')
+
+                if Agent.mode == 'log':
+                    lg.info(f'Agent #{self.id} in node {self.prev_position} is committed to node {selected_node.id}.')
             elif p < committment + recruitment:
                 self.position = agent_node.id
-                lg.info(f'Agent #{self.id} in node {self.prev_position} is recruited to node {agent_node.id}.')
+
+                if Agent.mode == 'log':
+                    lg.info(f'Agent #{self.id} in node {self.prev_position} is recruited to node {agent_node.id}.')
             else:
-                lg.info(f'Agent #{self.id} stays in node {self.position}.')
+                if Agent.mode == 'log':
+                    lg.info(f'Agent #{self.id} stays in node {self.position}.')
 
     ##########################################################################
+    # ascending transition
     def ascending(self,agents,node):
         if node.parent_node is not None:
             abandonment = 0 #Agent.k *(1-node.utility/Agent.arena.max_targets_per_node)
@@ -193,11 +213,15 @@ class Agent:
             p = np.random.uniform(0,1)
             if p < abandonment + self_inhibition + cross_inhibition:
                 self.position = node.parent_node.id
-                lg.info(f'Agent #{self.id} leaves node {self.prev_position} to parent_node {self.position}.')
+
+                if Agent.mode == 'log':
+                    lg.info(f'Agent #{self.id} leaves node {self.prev_position} to parent_node {self.position}.')
             else:
-                lg.info(f'Agent #{self.id} stays in node {self.position}.')
+                if Agent.mode == 'log':
+                    lg.info(f'Agent #{self.id} stays in node {self.position}.')
 
     ##########################################################################
+    # check if an agent is a neighbour
     def is_neighbour(self,agent):
         node = self.tree.catch_node(self.position)
         if node.catch_node(agent.position) is not None:

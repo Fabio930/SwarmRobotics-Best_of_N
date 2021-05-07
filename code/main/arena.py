@@ -84,13 +84,14 @@ class Arena:
         for i in range(self.tree_depth+1):
             self.num_nodes += self.tree_branches**i
 
-        self.tree = Tree(self.tree_branches,self.tree_depth)
+        self.tree = Tree(self.tree_branches,self.tree_depth,self.num_agents)
 
         self.create_targets(config_element)
         self.assign_targets()
         self.create_agents(config_element)
         self.initialize_agents()
         self.tree.update_tree_utility()
+        self.tree_copy = copy.deepcopy(self.tree)
 
     ##########################################################################
     # create the targets
@@ -133,6 +134,10 @@ class Arena:
                 leaf = self.tree.catch_node(1)
                 if len(leaf.targets) >= self.max_targets_per_node:
                     leaf = self.tree.catch_node(2)
+                    if len(leaf.targets) >= self.max_targets_per_node-3:
+                        leaf = self.tree.catch_node(3)
+                        if len(leaf.targets) >= self.max_targets_per_node-3:
+                            leaf = self.tree.catch_node(4)
                 leaf.targets = np.append(leaf.targets,t)
                 t.assign = leaf.id
                 print('target '+str(t.id)+' in node',leaf.id)
@@ -140,11 +145,8 @@ class Arena:
     ##########################################################################
     # assign agents to root tree of the tree and update their world representation
     def initialize_agents(self):
-        print("Initializing agents")
         for a in self.agents:
-            self.tree.committed_agents = np.append(self.tree.committed_agents,a)
-        for a in self.agents:
-            a.tree = self.get_tree_copy()
+            self.tree.committed_agents[a.id] = a
         print(str(self.num_agents)+' Agents initialized in the root node')
 
     ##########################################################################
@@ -162,6 +164,7 @@ class Arena:
     def init_experiment( self ):
         print('Experiment started')
         self.num_steps = 0
+        self.tree = copy.deepcopy(self.tree_copy)
         for agent in self.agents:
             agent.init_experiment()
 
@@ -183,16 +186,17 @@ class Arena:
         # then, apply the desired motion and update the agent state
         for a in self.agents:
             a.update()
-            self.tree.erase_agent(a)
+            prev_node = self.tree.catch_node(a.prev_position)
+            prev_node.committed_agents[a.id] = None
             node = self.tree.catch_node(a.position)
-            node.committed_agents = np.append(node.committed_agents,a)
+            node.committed_agents[a.id] = a
 
         self.num_steps += 1
 
     ##########################################################################
     # determines if an exeperiment is finished
     def experiment_finished( self):
-        if (self.max_steps > 0) and (self.max_steps <= self.num_steps):
+        if ((self.max_steps > 0) and (self.max_steps <= self.num_steps)) or self.tree.check_finish_condt():
             print("Run finished")
             return 1
 

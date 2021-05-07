@@ -5,19 +5,17 @@
           pixels_per_meter="900"
           /> -->
     <arena
-          num_agents="8"
-          max_steps="200"
-          num_targets="20"
-          num_runs="10"
-          MaxTargetPerNode="15"
-          tree_branches="2"
+          num_agents="100"
+          max_steps="5000"
+          num_targets="43"
+          num_runs="100"
+          MaxTargetPerNode="13"
+          tree_branches="4"
           tree_depth="1"
           >
           <agent
-
                 k=".8"
                 h=".2"
-
                 />
           <target
             quality ="1"
