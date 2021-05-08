@@ -1,21 +1,21 @@
 <?xml version="1.0"?>
 
 <configuration>
-    <!-- <gui
-          pixels_per_meter="900"
-          /> -->
+    <gui
+          pixels_per_meter="400"
+          />
     <arena
           num_agents="100"
           max_steps="5000"
-          num_targets="43"
+          num_targets="52"
           num_runs="100"
-          MaxTargetPerNode="13"
-          tree_branches="4"
+          MaxTargetPerNode="12"
+          tree_branches="5"
           tree_depth="1"
           >
           <agent
-                k=".8"
-                h=".2"
+                k=".1"
+                h=".9"
                 />
           <target
             quality ="1"

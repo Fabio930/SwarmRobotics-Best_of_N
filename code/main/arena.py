@@ -134,10 +134,14 @@ class Arena:
                 leaf = self.tree.catch_node(1)
                 if len(leaf.targets) >= self.max_targets_per_node:
                     leaf = self.tree.catch_node(2)
-                    if len(leaf.targets) >= self.max_targets_per_node-3:
+                    if len(leaf.targets) >= self.max_targets_per_node-2:
                         leaf = self.tree.catch_node(3)
-                        if len(leaf.targets) >= self.max_targets_per_node-3:
+                        if len(leaf.targets) >= self.max_targets_per_node-2:
                             leaf = self.tree.catch_node(4)
+                            if len(leaf.targets) >= self.max_targets_per_node-2:
+                                leaf = self.tree.catch_node(5)
+                                if len(leaf.targets) >= self.max_targets_per_node-2:
+                                    break
                 leaf.targets = np.append(leaf.targets,t)
                 t.assign = leaf.id
                 print('target '+str(t.id)+' in node',leaf.id)

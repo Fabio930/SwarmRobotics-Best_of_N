@@ -13,7 +13,7 @@ class Tree:
     # standart class init
     def __init__(self, num_childs,depth,num_agents):
 
-        self.x, self.y = 0,0
+        self.x, self.y1, self.y2 = 0,0,0
 
         self.id = Tree.num_nodes
         self.utility = 0
@@ -78,9 +78,9 @@ class Tree:
                 self.utility += 1
 
     ##########################################################################
-    # check if all agents are in the same node
+    # check if all agents are in the same leaf node
     def check_finish_condt(self):
-        if self.id > 0:
+        if self.child_nodes[0] is None:
             sum = 0
             for a in self.committed_agents:
                 if a is not None:

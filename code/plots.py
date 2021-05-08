@@ -68,7 +68,7 @@ for dir in os.listdir(base):
             listT[:] = [listT[i] for i in index]
             ax.errorbar(x=listX, y=listT, color=(np.random.uniform(0,1),np.random.uniform(0,1),np.random.uniform(0,1)), label=i )
         ax.set_ylim(bottom=0,top=int(lim))
-        plt.ylabel('x1')
+        plt.ylabel('steps')
         plt.xlabel('r')
         plt.legend()
         plt.savefig(path+'/Results_Time.png')
