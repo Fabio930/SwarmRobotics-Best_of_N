@@ -20,7 +20,7 @@ class Results:
 
     def update(self):
         sum = 0
-        for a in self.arena.tree.catch_node(1).committed_agents:
+        for a in self.arena.tree.catch_best_lnode()[0].committed_agents:
             if a is not None:
                 sum += 1
         self.population_on_best_node = np.append(self.population_on_best_node,sum/self.arena.num_agents)
@@ -31,13 +31,13 @@ class Results:
         path = self.base+'/K'+ str(self.arena.tree_branches) +'D'+ str(self.arena.tree_depth)+'_'+str(self.arena.num_agents)+'a'+','+str(self.arena.max_steps)
         if not os.path.exists(path ):
             os.mkdir(path)
-        x=open(path+'/Pop_on_best_node_'+str(self.arena.tree.catch_node(1).utility)+','+str(self.arena.num_targets)+'.txt','a')
+        x=open(path+'/Pop_on_best_node_'+str(self.arena.tree.catch_best_lnode()[0].utility)+','+str(self.arena.num_targets)+'.txt','a')
         x.write(str(self.population_on_best_node.mean())+'\n')
         x.close()
-        x=open(path+'/Times_'+str(self.arena.tree.catch_node(1).utility)+','+str(self.arena.num_targets)+'.txt','a')
+        x=open(path+'/Times_'+str(self.arena.tree.catch_best_lnode()[0].utility)+','+str(self.arena.num_targets)+'.txt','a')
         x.write(str(self.time.mean())+'\n')
         x.close()
-        x=open(path+'/r_'+str(self.arena.tree.catch_node(1).utility)+','+str(self.arena.num_targets)+'.txt','a')
+        x=open(path+'/r_'+str(self.arena.tree.catch_best_lnode()[0].utility)+','+str(self.arena.num_targets)+'.txt','a')
         x.write(str(self.r)+'\n')
         x.close()
         print('Mean on '+str(self.arena.num_runs)+' runs printed on file')

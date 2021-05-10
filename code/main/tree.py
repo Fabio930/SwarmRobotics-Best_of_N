@@ -38,6 +38,17 @@ class Tree:
         return self
 
     ##########################################################################
+    #  returns a all leaf nodes from the relative sub_tree
+    def get_leaf_nodes(self):
+        leafs = np.array([])
+        if self.child_nodes[0] is not None:
+            for c in self.child_nodes:
+                leafs = np.append(leafs,c.get_leaf_nodes())
+        else:
+            leafs = self
+        return leafs
+
+    ##########################################################################
     #  search the node with id=node_id starting from the caller node
     #  if the node is in the sub_tree return it, otherwise return none
     def catch_node(self,node_id):
@@ -49,6 +60,23 @@ class Tree:
                 if child is not None:
                     return child
         return None
+
+    ##########################################################################
+    #  search the leaf node with the max utility or the nodes in case of equalty
+    def catch_best_lnode(self):
+        best = np.array([])
+        leafs = self.get_leaf_nodes()
+        MAX = 0
+        pos = 0
+        for l in range(len(leafs)):
+            if leafs[l].utility > MAX:
+                MAX = leafs[l].utility
+                pos = l
+        best = np.append(best,leafs[pos])
+        for l in range(len(leafs)):
+            if (l != pos) and (leafs[l].utility == MAX):
+                best = np.append(best,leafs[pos])
+        return best
 
     ##########################################################################
     def get_sub_node(self,node_id):
