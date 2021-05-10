@@ -41,8 +41,7 @@ class PysageGUI(object):
         self.master = master
 
         self.delay  = 1.0 if config_element.attrib.get("delay")  is None else float(config_element.attrib["delay"])
-        self.pixels_per_meter = 250 if config_element.attrib.get("pixels_per_meter")  is None else int(config_element.attrib["pixels_per_meter"])
-
+        self.pixels_per_meter = 100
         # Initialize the arena and the agents
         self.arena = arena
         self.node_agents = [0]*self.arena.num_nodes
@@ -148,22 +147,21 @@ class PysageGUI(object):
         self.label.pack(side='right')
 
         # print ("Canvas size", self.pixels_per_meter*self.arena.dimensions)
-        a_width = self.pixels_per_meter
-        a_height = self.pixels_per_meter/2
+        a_width = self.pixels_per_meter * (self.arena.tree_depth * self.arena.tree_branches)
+        a_height = self.pixels_per_meter*(1+self.arena.tree_depth)
 
         self.w = tk.Canvas(self.master, width=int(a_width), height=int(a_height), background="#EEE")
         self.w.pack()
-        self.length = self.pixels_per_meter/(2*self.arena.tree_depth*self.arena.tree_branches)
-        agent_halfsize = int(Agent.size*self.length)
-        x1, y1 = agent_halfsize*2, self.pixels_per_meter*0.0001 + agent_halfsize*2
-        y2 = self.pixels_per_meter*0.0001 + self.length + agent_halfsize*2
+        self.length = 40
+        x1, y1 = 10, 20
+        y2 = self.length + y1
         node = self.arena.tree.catch_node(0)
         node.x,node.y1, node.y2 = x1,y1,y2
         x2 = x1+10
         self.w.create_rectangle(x1,y1,x2,y2,fill="white", outline="black")
         self.w.create_text(x1,y1,anchor="sw",text="a")
         self.node_agents[0] = self.w.create_rectangle(x1,y1,x2,y2,fill="black")
-        self.w.create_text(x1,y2,anchor="nw",text="id:0")
+        self.w.create_text(x1,y2+2,anchor="nw",text="id:0")
         # self.nodes_id[0] = self.w.create_oval(x1,y1,x2,y2, fill="white")
         self.w.create_rectangle(x2+6,y1,x2+16,y2,fill="white", outline="black")
         self.w.create_text(x2+6,y1,anchor="sw",text="u")
@@ -191,7 +189,6 @@ class PysageGUI(object):
                 self.w.coords(self.node_agents[n], (node.x+10, node.y1 + (node.y2-node.y1)*(1 - sum/self.arena.num_agents),node.x+20,node.y2))
 
     def paintTree(self,depth,x2,y2):
-        agent_halfsize = int(Agent.size*self.length)
         y1 = y2 + 20
         y2 = y1 + self.length
         for b in range(self.arena.tree_branches):
@@ -216,7 +213,6 @@ class PysageGUI(object):
             self.paint_util(depth-1,x2,y2,b)
 
     def paint_util(self,depth,x2,y2,r):
-        agent_halfsize = int(Agent.size*self.length)
         if depth > 0:
             y1 = y2 + 20
             y2 = y1 + self.length
