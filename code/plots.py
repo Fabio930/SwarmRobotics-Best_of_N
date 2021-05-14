@@ -1,137 +1,68 @@
 # -*- coding: utf-8 -*-
 
+import matplotlib as mpl
+import seaborn as sns
+import pandas as pd
 import numpy as np
-import os, math
+import os, csv
 from matplotlib import pyplot as plt
 
 base = os.path.abspath("")+'/results'
 if not os.path.exists(base ):
     os.mkdir(base)
 
-resumeT={}
-resumeY={}
-resumeX={}
 for dir in os.listdir(base):
-    if not os.path.isfile(os.path.join(base, dir)):
-        X={}
-        Y={}
-        T={}
-        lim = ''
-        path=os.path.join(base, dir)
-        flags = ''
-        for i in range(len(dir)):
-            if dir[len(dir)-1 - i] != ",":
-                flags += dir[len(dir)-1 - i]
-            else:
-                break
-        for i in range(len(flags)):
-            lim += flags[len(flags)-1 - i]
-        for elem in os.listdir(path):
-            if elem[0] == 'P':
-                flag=np.array([])
-                y=open(os.path.join(path,elem),'r')
-                for l in y.readlines():
-                    flags=''
-                    for c in l:
-                        if c != '\n':
-                            flags+=c
-                    flag = np.append(flag,float(flags))
-                y.close()
-                Y.update({elem[-9]+elem[-8]+elem[-7]+elem[-6]+elem[-5]:flag})
-                if elem[-5] == '1':
-                    resumeY.update({elem[-9]+elem[-8]+elem[-7]+elem[-6]+elem[-5]:flag})
-
-            elif elem[0] == 'T':
-                flag=np.array([])
-                t=open(os.path.join(path,elem),'r')
-                for l in t.readlines():
-                    flags=''
-                    for c in l:
-                        if c != '\n':
-                            flags+=c
-                    flag = np.append(flag,float(flags))
-                t.close()
-                T.update({elem[-9]+elem[-8]+elem[-7]+elem[-6]+elem[-5]:flag})
-                if elem[-5] == '1':
-                    resumeT.update({elem[-9]+elem[-8]+elem[-7]+elem[-6]+elem[-5]:flag})
-            elif elem[0] == 'r':
-                flag=np.array([])
-                x=open(os.path.join(path,elem),'r')
-                for l in x.readlines():
-                    flags=''
-                    for c in l:
-                        if c != '\n':
-                            flags+=c
-                    flag = np.append(flag,flags)
-                x.close()
-                X.update({elem[-9]+elem[-8]+elem[-7]+elem[-6]+elem[-5]:flag})
-                if elem[-5] == '1':
-                    resumeX.update({elem[-9]+elem[-8]+elem[-7]+elem[-6]+elem[-5]:flag})
-
-        fig, ax = plt.subplots(figsize=(10,5))
-        for i in T.keys():
-            listX = X.get(i)
-            listT = T.get(i)
-            listY = Y.get(i)
-            index = list(range(len(listX)))
-            index.sort(key = listX.__getitem__)
-            listX[:] = [listX[i] for i in index]
-            listT[:] = [listT[i] for i in index]
-            listY[:] = [listY[i] for i in index]
-            ax.errorbar(x=listX, y=listT, color=(int(i[-5])*0.1,int(i[-2])*0.1,int(i[-1])*0.1),  label=i )
-        ax.set_ylim(bottom=0,top=int(lim)+500)
-        plt.title('Average over 100 runs -TIME-')
-        plt.ylabel('steps')
-        plt.xlabel('r')
-        plt.legend()
-        plt.savefig(path+'/Results_Time.png')
+    path=os.path.join(base, dir)
+    for sub_dir in os.listdir(path):
+        sub_path=os.path.join(path, sub_dir)
+        plt.tick_params(bottom='on')
+        fig,ax = plt.subplots(figsize=(10,5))
+        for elem in os.listdir(sub_path):
+            if elem[-4]+elem[-3]+elem[-2]+elem[-1] == '.csv':
+                if elem[-6]+elem[-5] == 'BI':
+                    ax2=ax.twinx()
+                    bi = csv.DictReader(open(os.path.join(sub_path, elem)))
+                    r = np.array([])
+                    m = np.array([])
+                    std = np.array([])
+                    for row in bi:
+                        r = np.append(r,str(row['r']))
+                        m = np.append(m,float(row['m']))
+                        std = np.append(std,float(row['std']))
+                    index = list(range(len(r)))
+                    index.sort(key = r.__getitem__)
+                    r[:] = [r[i] for i in index]
+                    m[:] = [m[i] for i in index]
+                    std[:] = [std[i] for i in index]
+                    sum = m+std
+                    sumO = np.array([])
+                    for i in sum:
+                        if i > 1:
+                            sumO = np.append(sumO,1)
+                        else:
+                            sumO = np.append(sumO,i)
+                    sns.lineplot(x=r,y=m, linewidth=.5,color='green',ls='--',ax=ax2)
+                    sns.lineplot(x=r,y=sumO, linewidth=1,color='blue',ax=ax2)
+                    ax2.set_ylim([-0.01,1.01])
+                    ax2.set_xlim([0,12])
+                elif elem[-6]+elem[-5] == 'HM':
+                    hm = pd.read_csv(os.path.join(sub_path, elem))
+                    # print(hm,'\n**********************')
+                    hm['x'] = pd.Categorical(hm['x'])
+                    hm.head()
+                    hm = hm.pivot_table('N','x','r',fill_value=0)
+                    # print(hm,'\n______________________')
+                    hm = hm.reindex(np.arange(0,1.02,0.02), fill_value=0)
+                    # print(hm,'\n++++++++++++++++++++++')
+                    ax=sns.heatmap(hm,cmap=plt.get_cmap("Reds"))
+                    ax.set_xticks(np.arange(len(hm.columns)))
+                    ax.set_yticks(np.arange(len(hm.index)))
+                    ax.set_xticklabels(hm.columns)
+                    ax.get_yaxis().set_visible(False)
+                    ax.invert_yaxis()
+                    ax.set_ylabel('x')
+                    ax.set_xlabel('r')
+        plt.tight_layout()
+        plt.savefig(sub_path+'/'+sub_dir+'.png')
         # plt.show()
         plt.close()
-
-        fig, ax = plt.subplots(figsize=(10,5))
-        for i in Y.keys():
-            ax.errorbar(x=X.get(i), y=Y.get(i), color=(int(i[-5])*0.1,int(i[-2])*0.1,int(i[-1])*0.1),  label=i )
-        ax.set_ylim(bottom=0,top=1.1)
-        plt.title('Average over 100 runs -POP ON THE BEST NODE-')
-        plt.ylabel('x1')
-        plt.xlabel('r')
-        plt.legend()
-        plt.savefig(path+'/Results_POP.png')
-        # plt.show()
-        plt.close()
-
-fig, ax = plt.subplots(figsize=(10,5))
-for i in resumeT.keys():
-    listX = resumeX.get(i)
-    listT = resumeT.get(i)
-    index = list(range(len(listX)))
-    index.sort(key = listX.__getitem__)
-    listX[:] = [listX[i] for i in index]
-    listT[:] = [listT[i] for i in index]
-    ax.errorbar(x=listX, y=listT, color=(int(i[-2])*0.1,int(i[-1])*0.1,int(i[-5])*0.1), label='N='+i[-2] )
-ax.set_ylim(bottom=0,top=int(lim)+500)
-plt.title('Resuming plot for different tree size (N) -AVG TIME-')
-plt.ylabel('steps')
-plt.xlabel('r')
-plt.legend()
-plt.savefig(base+'/Results_Time.png')
-# plt.show()
-plt.close()
-
-fig, ax = plt.subplots(figsize=(10,5))
-for i in resumeY.keys():
-    listX = resumeX.get(i)
-    listY = resumeY.get(i)
-    index = list(range(len(listX)))
-    index.sort(key = listX.__getitem__)
-    listX[:] = [listX[i] for i in index]
-    listY[:] = [listY[i] for i in index]
-    ax.errorbar(x=listX, y=listY, color=(int(i[-2])*0.1,int(i[-1])*0.1,int(i[-5])*0.1),  label='N='+i[-2])
-ax.set_ylim(bottom=0,top=1.1)
-plt.title('Resuming plot for different tree size (N) -AVG POPULATION ON BEST NODE')
-plt.ylabel('x1')
-plt.xlabel('r')
-plt.legend()
-plt.savefig(base+'/Results_POP.png')
-# plt.show()
-plt.close()

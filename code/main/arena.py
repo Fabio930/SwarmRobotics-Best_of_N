@@ -131,17 +131,13 @@ class Arena:
     def assign_targets(self):
         for t in self.targets:
             while t.assign==0:
-                leaf = self.tree.catch_node(1)
+                leaf = self.tree.catch_node(1)#get_random_leaf()#
                 if len(leaf.targets) >= self.max_targets_per_node:
                     leaf = self.tree.catch_node(2)
-                    if len(leaf.targets) >= self.max_targets_per_node-2:
+                    if len(leaf.targets) >= self.max_targets_per_node-1:
                         leaf = self.tree.catch_node(3)
-                        if len(leaf.targets) >= self.max_targets_per_node-2:
-                            leaf = self.tree.catch_node(4)
-                            if len(leaf.targets) >= self.max_targets_per_node-2:
-                                leaf = self.tree.catch_node(5)
-                                if len(leaf.targets) >= self.max_targets_per_node-2:
-                                    break
+                        if len(leaf.targets) >= self.max_targets_per_node-1:
+                            break
                 leaf.targets = np.append(leaf.targets,t)
                 t.assign = leaf.id
                 print('target '+str(t.id)+' in node',leaf.id)
@@ -167,6 +163,7 @@ class Arena:
     # initialisation/reset of the experiment variables
     def init_experiment( self ):
         print('Experiment started')
+        print('r='+str((10*self.agents[0].h)/(10*self.agents[0].k))+', v='+str(self.tree.catch_best_lnode()[0].utility/((self.num_targets-self.tree.catch_best_lnode()[0].utility)/(self.tree_branches-1))))
         self.num_steps = 0
         self.tree = copy.deepcopy(self.tree_copy)
         for agent in self.agents:
@@ -200,7 +197,7 @@ class Arena:
     ##########################################################################
     # determines if an exeperiment is finished
     def experiment_finished( self):
-        if ((self.max_steps > 0) and (self.max_steps <= self.num_steps)) or self.tree.check_finish_condt():
+        if (self.max_steps > 0) and (self.max_steps <= self.num_steps):
             print("Run finished")
             return 1
 

@@ -104,19 +104,3 @@ class Tree:
         else:
             for t in self.targets:
                 self.utility += 1
-
-    ##########################################################################
-    # check if all agents are in the same leaf node
-    def check_finish_condt(self):
-        if self.child_nodes[0] is None:
-            sum = 0
-            for a in self.committed_agents:
-                if a is not None:
-                    sum += 1
-            if sum == len(self.committed_agents):
-                return True
-        if self.child_nodes[0] is not None:
-            for c in self.child_nodes:
-                if c.check_finish_condt():
-                    return True
-        return False
