@@ -11,7 +11,6 @@ class Results:
     def __init__( self, arena ):
 
         self.heat_map = {}
-        self.final_values= np.array([])
         self.r = (10*arena.agents[0].h) / (10*arena.agents[0].k)
         self.arena = arena
         self.base = os.path.abspath("results")
@@ -23,7 +22,6 @@ class Results:
         for a in self.arena.tree.catch_best_lnode()[0].committed_agents:
             if a is not None:
                 sum += 1
-        self.final_values = np.append(self.final_values,sum/self.arena.num_agents)
         flag = 0
         for i in self.heat_map.keys():
             if i==sum/self.arena.num_agents:
@@ -51,10 +49,4 @@ class Results:
                     writer.writeheader()
                 s+=1
                 writer.writerow({'r': round(self.r,2), 'x':i, 'N':self.heat_map.get(i)})
-        with open(path+'/BI.csv','a') as file1:
-            fieldnames = ['r', 'm','std']
-            writer = csv.DictWriter(file1, fieldnames=fieldnames)
-            if is_new:
-                writer.writeheader()
-            writer.writerow({'r': round(self.r,2), 'm':round(self.final_values.mean(),5), 'std':round(self.final_values.std(),5)})
         print('Mean on '+str(self.arena.num_runs)+' runs printed on file')
