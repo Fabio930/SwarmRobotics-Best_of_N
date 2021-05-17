@@ -27,7 +27,7 @@ for dir in os.listdir(base):
                 # print(hm,'\n______________________')
                 hm = hm.reindex(np.arange(0,1.025,0.025), fill_value=0)
                 # print(hm,'\n++++++++++++++++++++++')
-                ax=sns.heatmap(hm,cmap='Reds')
+                ax=sns.heatmap(hm,cmap='hot_r')
                 ax.set_xticks(np.arange(len(hm.columns)))
                 ax.set_yticks(np.arange(len(hm.index)))
                 ax.set_xticklabels(hm.columns)
@@ -51,7 +51,7 @@ for dir in os.listdir(base):
                 u=Y+Z
                 d=Y-Z
                 for i in range(len(Y)):
-                    if Z[i]<0.1:
+                    if Z[i]<0.15:
                         u[i]=Y[i]
                         d[i]=Y[i]
                 for i in range(len(Y)):
@@ -60,8 +60,11 @@ for dir in os.listdir(base):
                             if d[i]==u[i]:
                                 d[i]=d[i-1]
                                 Y[i]=Y[i-1]
+                for i in range(len(d)):
+                    if d[i]<0:
+                        d[i]=0
                 ax2 = ax.twinx()
-                # sns.lineplot(x=X,y=Y,color='green',linewidth=1,ls='--',ax=ax2)
+                sns.lineplot(x=X,y=Y,color='green',linewidth=1,ls='--',ax=ax2)
                 sns.lineplot(x=X,y=u,color='blue',linewidth=1.5,ax=ax2)
                 sns.lineplot(x=X,y=d,color='blue',linewidth=1.5,ax=ax2)
                 ax2.set_ylim([-0.01,1.01])
@@ -71,31 +74,3 @@ for dir in os.listdir(base):
                 plt.savefig(sub_path+'/'+sub_dir+'.png')
                 # plt.show()
                 plt.close()
-
-
-# if elem[-6]+elem[-5] == 'BI':
-#     ax2 = ax.twinx()
-#     bi = csv.DictReader(open(os.path.join(sub_path, elem)))
-#     r = np.array([])
-#     m = np.array([])
-#     std = np.array([])
-#     for row in bi:
-#         r = np.append(r,str(row['r']))
-#         m = np.append(m,float(row['m']))
-#         std = np.append(std,float(row['std']))
-#     index = list(range(len(r)))
-#     index.sort(key = r.__getitem__)
-#     r[:] = [r[i] for i in index]
-#     m[:] = [m[i] for i in index]
-#     std[:] = [std[i] for i in index]
-#     sum = m+std
-#     sumO = np.array([])
-#     for i in sum:
-#         if i > 1:
-#             sumO = np.append(sumO,1)
-#         else:
-#             sumO = np.append(sumO,i)
-#     sns.lineplot(x=r,y=m, linewidth=.5,color='green',ls='--',ax=ax2)
-#     sns.lineplot(x=r,y=sumO, linewidth=1,color='blue',ax=ax2)
-#     ax2.set_ylim([-0.01,1.01])
-#     ax2.set_xlim([0,12])
