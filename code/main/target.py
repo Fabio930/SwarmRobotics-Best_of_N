@@ -46,16 +46,16 @@ class Target:
         self.quality = 1
         if config_element.attrib.get("quality") is not None:
             self.quality = float(config_element.attrib["quality"])
-            if  self.quality<0:
+            if  self.quality<0 or self.quality>1:
                 print ("[ERROR] attribute 'quality' in tag <target> must be in [0,1]")
                 sys.exit(2)
 
-        rnd1 = np.random.uniform(0.5,1)
-        self.quality = self.quality * rnd1
-        if self.quality < 0:
-            self.quality = 0.1
-        if self.quality > 1:
-            self.quality = 1
+        # rnd1 = np.random.uniform(0.8,1)
+        # self.quality = self.quality * rnd1
+        # if self.quality < 0:
+        #     self.quality = 0.1
+        # if self.quality > 1:
+        #     self.quality = 1
 
         # identification
         self.id = Target.num_targets

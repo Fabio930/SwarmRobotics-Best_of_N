@@ -25,50 +25,22 @@ for dir in os.listdir(base):
                 hm.head()
                 hm = hm.pivot_table('N','x','r',fill_value=0)
                 # print(hm,'\n______________________')
-                hm = hm.reindex(np.arange(0,1.025,0.025), fill_value=0)
+                hm = hm.reindex(np.arange(0,1.01,0.01), fill_value=0)
                 # print(hm,'\n++++++++++++++++++++++')
-                ax=sns.heatmap(hm,cmap='hot_r')
+                ax=sns.heatmap(hm,cmap='coolwarm')
                 ax.set_xticks(np.arange(len(hm.columns)))
                 ax.set_yticks(np.arange(len(hm.index)))
                 ax.set_xticklabels(hm.columns)
-                ax.set_yticklabels(hm.index)
-                ax.get_yaxis().set_visible(False)
+                TICKS=np.array([])
+                for i in hm.index:
+                    if round(i%0.1,2) == 0.0 or round(i%0.1,2) == 0.1:
+                        # print(i,'+')
+                        TICKS = np.append(TICKS,round(i,2))
+                    else:
+                        TICKS = np.append(TICKS,'')
+                ax.set_yticklabels(TICKS)
+                # ax.get_yaxis().set_visible(False)
                 ax.invert_yaxis()
-                X = np.array([])
-                Y = np.array([])
-                Z = np.array([])
-                # Y = np.append(Y,0.5)
-                # Z = np.append(Z,0)
-                # X = np.append(X,'')
-                for i in hm.columns:
-                    X = np.append(X,str(i))
-                    flag = np.array([])
-                    for j in hm.index:
-                        if hm.loc[j,i] > 0:
-                            flag = np.append(flag,j)
-                    Y = np.append(Y,flag.mean())
-                    Z = np.append(Z,flag.std())
-                u=Y+Z
-                d=Y-Z
-                for i in range(len(Y)):
-                    if Z[i]<0.15:
-                        u[i]=Y[i]
-                        d[i]=Y[i]
-                for i in range(len(Y)):
-                    if i > 0:
-                        if d[i-1]!=u[i-1]:
-                            if d[i]==u[i]:
-                                d[i]=d[i-1]
-                                Y[i]=Y[i-1]
-                for i in range(len(d)):
-                    if d[i]<0:
-                        d[i]=0
-                ax2 = ax.twinx()
-                sns.lineplot(x=X,y=Y,color='green',linewidth=1,ls='--',ax=ax2)
-                sns.lineplot(x=X,y=u,color='blue',linewidth=1.5,ax=ax2)
-                sns.lineplot(x=X,y=d,color='blue',linewidth=1.5,ax=ax2)
-                ax2.set_ylim([-0.01,1.01])
-                ax2.set_ylabel('x')
                 ax.set_xlabel('r')
                 plt.tight_layout()
                 plt.savefig(sub_path+'/'+sub_dir+'.png')

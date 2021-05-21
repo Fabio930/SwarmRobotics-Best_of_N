@@ -1,19 +1,19 @@
 <?xml version="1.0"?>
 
 <configuration>
-    <!-- <gui/> -->
+    <gui/>
     <arena
           num_agents="100"
           max_steps="1000"
-          num_targets="31"
+          MAX_targets_per_leaf="20"
+          num_targets="55"
           num_runs="100"
-          MaxTargetPerNode="11"
-          tree_branches="3"
-          tree_depth="1"
+          tree_branches="2"
+          tree_depth="2"
           >
           <agent
-                k=".1"
-                h=".9"
+                k=".2"
+                h=".8"
                 />
           <target
             quality ="1"

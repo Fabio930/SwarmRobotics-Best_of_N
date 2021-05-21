@@ -46,17 +46,19 @@ class Arena:
         self.num_agents = int(config_element.attrib["num_agents"])
 
         # number of targets to initialize
-        self.num_targets = 1
-        if config_element.attrib.get("num_targets") is not None:
-            self.num_targets = int(config_element.attrib["num_targets"])
-
-        self.max_targets_per_node = 5
-        if config_element.attrib.get("MaxTargetPerNode") is not None:
-            self.max_targets_per_node = int(config_element.attrib["MaxTargetPerNode"])
-            if self.max_targets_per_node < 1:
-                print ("[ERROR] invalid value for 'MaxTargetPerNode' [1,) in tag <arena>")
+        self.MAX_targets_per_leaf = 100
+        if config_element.attrib.get("MAX_targets_per_leaf") is not None:
+            self.MAX_targets_per_leaf = int(config_element.attrib["MAX_targets_per_leaf"])
+            if self.MAX_targets_per_leaf < 0:
+                print ("[ERROR] for tag <arena> in configuration file the parameter <MAX_targets_per_leaf> should be in [1,)")
                 sys.exit(2)
 
+        self.num_targets = self.MAX_targets_per_leaf
+        if config_element.attrib.get("num_targets") is not None:
+            self.num_targets = int(config_element.attrib["num_targets"])
+            if self.num_targets < 0:
+                print ("[ERROR] for tag <arena> in configuration file the parameter <num_targets> should be in [0,MAX_targets_per_leaf)")
+                sys.exit(2)
         # number of runs to execute
         self.num_runs = 1 if config_element.attrib.get("num_runs") is None else int(config_element.attrib["num_runs"])
         self.run_id = 0
@@ -131,13 +133,15 @@ class Arena:
     def assign_targets(self):
         for t in self.targets:
             while t.assign==0:
-                leaf = self.tree.catch_node(1)#get_random_leaf()#
-                if len(leaf.targets) >= self.max_targets_per_node:
-                    leaf = self.tree.catch_node(2)
-                    if len(leaf.targets) >= self.max_targets_per_node-1:
-                        leaf = self.tree.catch_node(3)
-                        if len(leaf.targets) >= self.max_targets_per_node-1:
-                            break
+                leaf = self.tree.get_leaf_nodes()[0]#get_random_leaf()
+                if len(leaf.targets) >= 12:
+                    leaf = self.tree.get_leaf_nodes()[1]
+                    if len(leaf.targets) >= 10:
+                        leaf = self.tree.get_leaf_nodes()[2]
+                        if len(leaf.targets) >= 10:
+                            leaf = self.tree.get_leaf_nodes()[3]
+                            if len(leaf.targets) >= 10:
+                                break
                 leaf.targets = np.append(leaf.targets,t)
                 t.assign = leaf.id
                 print('target '+str(t.id)+' in node',leaf.id)
@@ -163,7 +167,10 @@ class Arena:
     # initialisation/reset of the experiment variables
     def init_experiment( self ):
         print('Experiment started')
-        print('r='+str((10*self.agents[0].h)/(10*self.agents[0].k))+', v='+str(self.tree.catch_best_lnode()[0].utility/((self.num_targets-self.tree.catch_best_lnode()[0].utility)/(self.tree_branches-1))))
+        if self.num_targets-self.tree.catch_best_lnode()[0].utility!=0:
+            print('r='+str((10*self.agents[0].h)/(10*self.agents[0].k))+', v='+str(round(self.tree.catch_best_lnode()[0].utility/((self.num_targets-self.tree.catch_best_lnode()[0].utility)/(len(self.tree.get_leaf_nodes())-1)),2)))
+        else:
+            print('r='+str((10*self.agents[0].h)/(10*self.agents[0].k))+', v=1.0')
         self.num_steps = 0
         self.tree = copy.deepcopy(self.tree_copy)
         for agent in self.agents:

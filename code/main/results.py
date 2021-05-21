@@ -35,7 +35,7 @@ class Results:
         path = self.base+'/K'+ str(self.arena.tree_branches) +'D'+ str(self.arena.tree_depth)+'_'+str(self.arena.num_agents)+'a,'+str(self.arena.max_steps)
         if not os.path.exists(path ):
             os.mkdir(path)
-        path=path+'/v'+str(self.arena.tree.catch_best_lnode()[0].utility/((self.arena.num_targets-self.arena.tree.catch_best_lnode()[0].utility)/(self.arena.tree_branches-1)))
+        path=path+'/v'+str(round(self.tree.catch_best_lnode()[0].utility/((self.num_targets-self.tree.catch_best_lnode()[0].utility)/(len(self.tree.get_leaf_nodes())-1)),2))
         is_new = False
         if not os.path.exists(path ):
             os.mkdir(path)

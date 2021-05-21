@@ -169,7 +169,7 @@ class PysageGUI(object):
         self.w.create_text(x2+30,y1+15,anchor="sw",text="u: % of utility")
         self.w.create_text(x2+30,y1+30,anchor="sw",text="id: node identifier")
 
-        self.utility_id[0] = self.w.create_rectangle(x2+6, y1 + (y2-y1)*(1 - node.utility/self.arena.max_targets_per_node),x2+16,y2,fill="green")
+        self.utility_id[0] = self.w.create_rectangle(x2+6, y1 + (y2-y1)*(1 - node.utility/self.arena.MAX_targets_per_leaf),x2+16,y2,fill="green")
         self.nodes_x = np.append(self.nodes_x,x1)
         self.paintTree(self.arena.tree_depth,x2,y2)
         self.arena.tree_copy=copy.deepcopy(self.arena.tree)
@@ -209,7 +209,7 @@ class PysageGUI(object):
             self.w.create_text(x1+10,y2+2,anchor="nw",text="id:"+str(node.id))
 
             self.w.create_rectangle(x2+6,y1,x2+16,y2,fill="white", outline="black")
-            self.utility_id[node.id] = self.w.create_rectangle(x2+6, y1 + (y2-y1)*(1 - node.utility/self.arena.max_targets_per_node),x2+16,y2,fill="green")
+            self.utility_id[node.id] = self.w.create_rectangle(x2+6, y1 + (y2-y1)*(1 - node.utility/self.arena.MAX_targets_per_leaf),x2+16,y2,fill="green")
             self.paint_util(depth-1,x2,y2,b)
 
     def paint_util(self,depth,x2,y2,r):
@@ -229,5 +229,5 @@ class PysageGUI(object):
                 self.w.create_text(x1+10,y2+2,anchor="nw",text="id:"+str(node.id))
 
                 self.w.create_rectangle(x2+6,y1,x2+16,y2,fill="white", outline="black")
-                self.utility_id[node.id] = self.w.create_rectangle(x2+6,  y1 + (y2-y1)*(1 - node.utility/self.arena.max_targets_per_node),x2+16,y2,fill="green")
+                self.utility_id[node.id] = self.w.create_rectangle(x2+6,  y1 + (y2-y1)*(1 - node.utility/self.arena.MAX_targets_per_leaf),x2+16,y2,fill="green")
                 self.paint_util(depth-1,x2,y2,r)

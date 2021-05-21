@@ -171,14 +171,14 @@ class Agent:
     def descending(self,agents,node):
         if node.child_nodes[0] is not None:
             selected_node = np.random.choice(node.child_nodes)
-            committment = Agent.k * Agent.arena.get_node_utility(selected_node.id)/Agent.arena.max_targets_per_node
+            committment = Agent.k * Agent.arena.get_node_utility(selected_node.id)/Agent.arena.MAX_targets_per_leaf
             agent_node = None
             if len(agents) > 0:
                 agent = np.random.choice(agents)
                 agent_node = node.get_sub_node(agent.position)
             recruitment = 0
             if agent_node is not None:
-                recruitment = Agent.h * agent.tree.catch_node(self.position).utility/Agent.arena.max_targets_per_node
+                recruitment = Agent.h * agent.tree.catch_node(self.position).utility/Agent.arena.MAX_targets_per_leaf
             p = np.random.uniform(0,1)
             if p < committment:
                 self.position = selected_node.id
@@ -198,7 +198,7 @@ class Agent:
     # ascending transition
     def ascending(self,agents,node):
         if node.parent_node is not None:
-            abandonment = 0 #Agent.k *(1-node.utility/Agent.arena.max_targets_per_node)
+            abandonment = Agent.k *(1-node.utility/Agent.arena.MAX_targets_per_leaf)
             # agent_node_self = None
             agent_node_cross = None
             if len(agents) > 0:
@@ -207,9 +207,9 @@ class Agent:
                 agent_node_cross = node.get_sibling_node(agent.position)
             self_inhibition,cross_inhibition = 0,0
             # if agent_node_self is not None:
-            #     self_inhibition = 0 #Agent.h * agent.tree.catch_node(self.position).utility/Agent.arena.max_targets_per_node
+            #     self_inhibition = Agent.h * (1-agent.tree.catch_node(self.position).utility/Agent.arena.MAX_targets_per_leaf)
             if agent_node_cross is not None:
-                cross_inhibition = Agent.h * agent.tree.catch_node(agent_node_cross.id).utility/Agent.arena.max_targets_per_node
+                cross_inhibition = Agent.h * agent.tree.catch_node(agent_node_cross.id).utility/Agent.arena.MAX_targets_per_leaf
             p = np.random.uniform(0,1)
             if p < abandonment + self_inhibition + cross_inhibition:
                 self.position = node.parent_node.id

@@ -103,4 +103,4 @@ class Tree:
             self.utility = self.utility/len(self.child_nodes)
         else:
             for t in self.targets:
-                self.utility += 1
+                self.utility += t.quality
