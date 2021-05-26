@@ -119,8 +119,7 @@ class Agent:
 
     ##########################################################################
     # update the utilities of the world model and choose the next state of the agent
-    def control(self):
-        # lg.info(f'Agent #{self.id} is in node {self.position} with state {self.state}.')
+    def control(self): #l'agente deve controllare lutilità di un nodo foglia scegliendo rami random
         node = self.tree.catch_node(self.position)
         node.utility = Agent.arena.get_node_utility(node.id)
         self.update_world_utilities(node)
@@ -138,8 +137,8 @@ class Agent:
         if node.parent_node is not None:
             utility = 0
             for c in node.parent_node.child_nodes:
-                utility += c.utility
-            node.parent_node.utility = utility/len(node.parent_node.child_nodes)
+                utility += c.utility_mean
+            node.parent_node.utility_mean = utility/len(node.parent_node.child_nodes)
             self.update_world_utilities(node.parent_node)
 
     ##########################################################################
@@ -171,14 +170,14 @@ class Agent:
     def descending(self,agents,node):
         if node.child_nodes[0] is not None:
             selected_node = np.random.choice(node.child_nodes)
-            committment = Agent.k * Agent.arena.get_node_utility(selected_node.id)/Agent.arena.MAX_targets_per_leaf
+            committment = Agent.k * Agent.arena.get_node_utility(selected_node.id)/Agent.arena.MAX_utility
             agent_node = None
             if len(agents) > 0:
                 agent = np.random.choice(agents)
                 agent_node = node.get_sub_node(agent.position)
             recruitment = 0
             if agent_node is not None:
-                recruitment = Agent.h * agent.tree.catch_node(self.position).utility/Agent.arena.MAX_targets_per_leaf
+                recruitment = Agent.h * agent.tree.catch_node(self.position).utility_mean/Agent.arena.MAX_utility
             p = np.random.uniform(0,1)
             if p < committment:
                 self.position = selected_node.id
@@ -198,7 +197,7 @@ class Agent:
     # ascending transition
     def ascending(self,agents,node):
         if node.parent_node is not None:
-            abandonment = Agent.k *(1-node.utility/Agent.arena.MAX_targets_per_leaf)
+            abandonment = Agent.k *(1- Agent.arena.get_node_utility(node.id)/Agent.arena.MAX_utility)
             # agent_node_self = None
             agent_node_cross = None
             if len(agents) > 0:
@@ -207,9 +206,9 @@ class Agent:
                 agent_node_cross = node.get_sibling_node(agent.position)
             self_inhibition,cross_inhibition = 0,0
             # if agent_node_self is not None:
-            #     self_inhibition = Agent.h * (1-agent.tree.catch_node(self.position).utility/Agent.arena.MAX_targets_per_leaf)
+            #     self_inhibition = Agent.h * (1-agent.tree.catch_node(self.position).utility/Agent.arena.MAX_utility)
             if agent_node_cross is not None:
-                cross_inhibition = Agent.h * agent.tree.catch_node(agent_node_cross.id).utility/Agent.arena.MAX_targets_per_leaf
+                cross_inhibition = Agent.h * agent.tree.catch_node(agent_node_cross.id).utility_mean/Agent.arena.MAX_utility
             p = np.random.uniform(0,1)
             if p < abandonment + self_inhibition + cross_inhibition:
                 self.position = node.parent_node.id

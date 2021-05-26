@@ -34,12 +34,10 @@ for dir in os.listdir(base):
                 TICKS=np.array([])
                 for i in hm.index:
                     if round(i%0.1,2) == 0.0 or round(i%0.1,2) == 0.1:
-                        # print(i,'+')
                         TICKS = np.append(TICKS,round(i,2))
                     else:
                         TICKS = np.append(TICKS,'')
                 ax.set_yticklabels(TICKS)
-                # ax.get_yaxis().set_visible(False)
                 ax.invert_yaxis()
                 ax.set_xlabel('r')
                 plt.tight_layout()

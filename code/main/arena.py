@@ -3,7 +3,6 @@
 import random, copy,time
 import numpy as np
 from main.agent import AgentFactory
-from main.target import TargetFactory
 from main.tree import Tree
 
 ########################################################################################
@@ -45,20 +44,14 @@ class Arena:
             sys.exit(2)
         self.num_agents = int(config_element.attrib["num_agents"])
 
-        # number of targets to initialize
-        self.MAX_targets_per_leaf = 100
-        if config_element.attrib.get("MAX_targets_per_leaf") is not None:
-            self.MAX_targets_per_leaf = int(config_element.attrib["MAX_targets_per_leaf"])
-            if self.MAX_targets_per_leaf < 0:
-                print ("[ERROR] for tag <arena> in configuration file the parameter <MAX_targets_per_leaf> should be in [1,)")
+        # maximum utility for leaf nodes
+        self.MAX_utility = 10
+        if config_element.attrib.get("MAX_utility") is not None:
+            self.MAX_utility = int(config_element.attrib["MAX_utility"])
+            if self.MAX_utility <1:
+                print ("[ERROR] attribute 'MAX_utility' in tag <arena> must be in [1,)")
                 sys.exit(2)
 
-        self.num_targets = self.MAX_targets_per_leaf
-        if config_element.attrib.get("num_targets") is not None:
-            self.num_targets = int(config_element.attrib["num_targets"])
-            if self.num_targets < 0:
-                print ("[ERROR] for tag <arena> in configuration file the parameter <num_targets> should be in [0,MAX_targets_per_leaf)")
-                sys.exit(2)
         # number of runs to execute
         self.num_runs = 1 if config_element.attrib.get("num_runs") is None else int(config_element.attrib["num_runs"])
         self.run_id = 0
@@ -68,7 +61,6 @@ class Arena:
         self.max_steps = 0 if config_element.attrib.get("max_steps") is None else int(config_element.attrib["max_steps"])
 
         self.agents = np.array([])
-        self.targets = np.array([])
 
         self.tree_branches = 2
         if config_element.attrib.get("tree_branches") is not None:
@@ -86,30 +78,12 @@ class Arena:
         for i in range(self.tree_depth+1):
             self.num_nodes += self.tree_branches**i
 
-        self.tree = Tree(self.tree_branches,self.tree_depth,self.num_agents)
+        self.tree = Tree(self.tree_branches,self.tree_depth,self.num_agents,self.MAX_utility)
 
-        self.create_targets(config_element)
-        self.assign_targets()
         self.create_agents(config_element)
         self.initialize_agents()
         self.tree.update_tree_utility()
         self.tree_copy = copy.deepcopy(self.tree)
-
-    ##########################################################################
-    # create the targets
-    def create_targets(self,config_element):
-        target_config= config_element.find('target')
-        if target_config is None:
-            print ("[ERROR] required tag <target> in configuration file is missing")
-            sys.exit(2)
-
-        # dynamically load the desired module
-        lib_pkg = target_config.attrib.get("pkg")
-        if lib_pkg is not None:
-            importlib.import_module(lib_pkg + ".target", lib_pkg)
-
-        for i in range(0,self.num_targets):
-            self.targets = np.append(self.targets,TargetFactory.create_target(target_config, self))
 
     ##########################################################################
     # create the agents
@@ -127,24 +101,6 @@ class Arena:
 
         for i in range(0,self.num_agents):
             self.agents = np.append(self.agents,AgentFactory.create_agent(agent_config, self))
-
-    ##########################################################################
-    # assign targets to the first node
-    def assign_targets(self):
-        for t in self.targets:
-            while t.assign==0:
-                leaf = self.tree.get_leaf_nodes()[0]#get_random_leaf()
-                if len(leaf.targets) >= 12:
-                    leaf = self.tree.get_leaf_nodes()[1]
-                    if len(leaf.targets) >= 10:
-                        leaf = self.tree.get_leaf_nodes()[2]
-                        if len(leaf.targets) >= 10:
-                            leaf = self.tree.get_leaf_nodes()[3]
-                            if len(leaf.targets) >= 10:
-                                break
-                leaf.targets = np.append(leaf.targets,t)
-                t.assign = leaf.id
-                print('target '+str(t.id)+' in node',leaf.id)
 
     ##########################################################################
     # assign agents to root tree of the tree and update their world representation
@@ -167,10 +123,6 @@ class Arena:
     # initialisation/reset of the experiment variables
     def init_experiment( self ):
         print('Experiment started')
-        if self.num_targets-self.tree.catch_best_lnode()[0].utility!=0:
-            print('r='+str((10*self.agents[0].h)/(10*self.agents[0].k))+', v='+str(round(self.tree.catch_best_lnode()[0].utility/((self.num_targets-self.tree.catch_best_lnode()[0].utility)/(len(self.tree.get_leaf_nodes())-1)),2)))
-        else:
-            print('r='+str((10*self.agents[0].h)/(10*self.agents[0].k))+', v=1.0')
         self.num_steps = 0
         self.tree = copy.deepcopy(self.tree_copy)
         for agent in self.agents:
@@ -229,4 +181,4 @@ class Arena:
         return copy.deepcopy(self.tree)
 
     def get_node_utility(self,node_id):
-        return self.tree.catch_node(node_id).utility
+        return np.random.normal(self.tree.catch_node(node_id).utility_mean,self.tree.catch_node(node_id).utility_std)

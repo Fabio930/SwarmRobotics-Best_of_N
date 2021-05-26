@@ -5,8 +5,6 @@
     <arena
           num_agents="100"
           max_steps="1000"
-          MAX_targets_per_leaf="20"
-          num_targets="55"
           num_runs="100"
           tree_branches="2"
           tree_depth="2"
