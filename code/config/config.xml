@@ -3,15 +3,19 @@
 <configuration>
     <gui/>
     <arena
+          MAX_utility="1"
+          MAX_std="2"
           num_agents="100"
           max_steps="1000"
           num_runs="100"
           tree_branches="2"
           tree_depth="2"
+          v="1.2"
           >
           <agent
-                k=".2"
-                h=".8"
+                communication_range='limited'
+                k=".3"
+                h=".7"
                 />
           <target
             quality ="1"

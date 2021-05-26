@@ -161,7 +161,7 @@ class PysageGUI(object):
         x2 = x1+10
         self.w.create_rectangle(x1,y1,x2,y2,fill="white", outline="black")
         self.w.create_text(x1,y1,anchor="sw",text="a")
-        self.node_agents[0] = self.w.create_rectangle(x1,y1,x2,y2,fill="black")
+        self.node_agents[0] = self.w.create_rectangle(x1,y1,x2,y2,fill="blue")
         self.w.create_text(x1,y2+2,anchor="nw",text="id:0")
         # self.nodes_id[0] = self.w.create_oval(x1,y1,x2,y2, fill="white")
         self.w.create_rectangle(x2+6,y1,x2+16,y2,fill="white", outline="black")
@@ -205,7 +205,7 @@ class PysageGUI(object):
             self.nodes_x = np.append(self.nodes_x,x1)
             # self.nodes_id[node.id]= self.w.create_oval(x1,y1,x2,y2, fill="white")
             self.w.create_rectangle(x2,y1,x2+10,y2,fill="white", outline="black")
-            self.node_agents[node.id] = self.w.create_rectangle(x2, y2,x2+10,y2,fill="black")
+            self.node_agents[node.id] = self.w.create_rectangle(x2, y2,x2+10,y2,fill="blue")
             x2 = x2 + 10
             self.w.create_text(x1+10,y2+2,anchor="nw",text="id:"+str(node.id))
 
@@ -225,7 +225,7 @@ class PysageGUI(object):
                 self.nodes_x = np.append(self.nodes_x,x1)
                 # self.nodes_id[node.id]= self.w.create_oval(x1,y1,x2,y2, fill="white")
                 self.w.create_rectangle(x2,y1,x2+10,y2,fill="white", outline="black")
-                self.node_agents[node.id] = self.w.create_rectangle(x2, y2,x2+10,y2,fill="black")
+                self.node_agents[node.id] = self.w.create_rectangle(x2, y2,x2+10,y2,fill="blue")
                 x2 = x2 + 10
                 self.w.create_text(x1+10,y2+2,anchor="nw",text="id:"+str(node.id))
 

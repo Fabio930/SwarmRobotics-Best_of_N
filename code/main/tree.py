@@ -8,10 +8,10 @@ import numpy as np
 class Tree:
 
     num_nodes = 0
-
+    s = 0
     ##########################################################################
     # standart class init
-    def __init__(self, num_childs,depth,num_agents,MAX_utility):
+    def __init__(self, num_childs,depth,num_agents,MAX_utility,MAX_std,v):
 
         self.x, self.y1, self.y2 = 0,0,0
 
@@ -27,18 +27,18 @@ class Tree:
         if depth > 0:
             for c in range(num_childs):
                 Tree.num_nodes += 1
-                child = Tree(num_childs,depth-1,num_agents,MAX_utility)
+                child = Tree(num_childs,depth-1,num_agents,MAX_utility,MAX_std,v)
                 child.parent_node = self
                 self.child_nodes[c] = child
         else:
-            self.utility_mean = np.random.uniform(1,MAX_utility)
-            b,t = self.utility_mean-1,MAX_utility-self.utility_mean
-            if b>t:
-                max = t
+            if Tree.s == 0:
+                self.utility_mean = MAX_utility
+                self.utility_std = np.random.uniform(0,MAX_std)
+                Tree.s = 1
             else:
-                max = b
-            self.utility_std = np.random.uniform(0,max)
-        print(self.utility_mean,self.utility_std,'----',self.id)
+                self.utility_mean = MAX_utility/v
+                self.utility_std = np.random.uniform(0,MAX_std)
+
     ##########################################################################
     #  returns a random leaf from the relative sub_tree
     def get_random_leaf(self):
@@ -109,4 +109,3 @@ class Tree:
                 c.update_tree_utility()
                 self.utility_mean += c.utility_mean
             self.utility_mean = self.utility_mean/len(self.child_nodes)
-        

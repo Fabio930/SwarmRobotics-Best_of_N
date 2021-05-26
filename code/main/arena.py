@@ -47,9 +47,23 @@ class Arena:
         # maximum utility for leaf nodes
         self.MAX_utility = 10
         if config_element.attrib.get("MAX_utility") is not None:
-            self.MAX_utility = int(config_element.attrib["MAX_utility"])
-            if self.MAX_utility <1:
-                print ("[ERROR] attribute 'MAX_utility' in tag <arena> must be in [1,)")
+            self.MAX_utility = float(config_element.attrib["MAX_utility"])
+            if self.MAX_utility < 0:
+                print ("[ERROR] attribute 'MAX_utility' in tag <arena> must be in [0,)")
+                sys.exit(2)
+
+        self.MAX_std = 0
+        if config_element.attrib.get("MAX_std") is not None:
+            self.MAX_std = float(config_element.attrib["MAX_std"])
+            if self.MAX_std < 0:
+                print ("[ERROR] attribute 'MAX_std' in tag <arena> must be in [0,)")
+                sys.exit(2)
+
+        self.v = 1
+        if config_element.attrib.get("v") is not None:
+            self.v = float(config_element.attrib["v"])
+            if self.v < 1:
+                print ("[ERROR] attribute 'v' in tag <arena> must be in [1,)")
                 sys.exit(2)
 
         # number of runs to execute
@@ -78,7 +92,7 @@ class Arena:
         for i in range(self.tree_depth+1):
             self.num_nodes += self.tree_branches**i
 
-        self.tree = Tree(self.tree_branches,self.tree_depth,self.num_agents,self.MAX_utility)
+        self.tree = Tree(self.tree_branches,self.tree_depth,self.num_agents,self.MAX_utility,self.MAX_std,self.v)
 
         self.create_agents(config_element)
         self.initialize_agents()
@@ -162,9 +176,9 @@ class Arena:
 
     ##########################################################################
     # return the list of agents
-    def get_neighbour_agents( self, agent, ref=0):
+    def get_neighbour_agents( self, agent, ref='infinite'):
         neighbour_list = []
-        if ref == 0:
+        if ref == 'infinite':
             for a in self.agents:
                 if a is not agent :
                     neighbour_list.append(a)
@@ -176,9 +190,16 @@ class Arena:
         return neighbour_list
 
     ##########################################################################
-    # return a copy of the Tree
-    def get_tree_copy(self):
-        return copy.deepcopy(self.tree)
-
+    # return a the utility of a random leaf node with his id
     def get_node_utility(self,node_id):
-        return np.random.normal(self.tree.catch_node(node_id).utility_mean,self.tree.catch_node(node_id).utility_std)
+        node = self.tree.catch_node(node_id)
+        if node.child_nodes[0] is not None:
+            selected_node = np.random.choice(node.child_nodes)
+            return self.get_node_utility(selected_node.id)
+        else:
+            value = np.random.normal(self.tree.catch_node(node_id).utility_mean,self.tree.catch_node(node_id).utility_std)
+            if value < 0:
+                value = 0
+            elif value > self.MAX_utility:
+                value = self.MAX_utility
+            return node_id , value
