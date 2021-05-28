@@ -3,8 +3,8 @@
 <configuration>
     <gui/>
     <arena
-          MAX_utility="1"
-          MAX_std="2"
+          MAX_utility="10"
+          MAX_std="6"
           num_agents="100"
           max_steps="1000"
           num_runs="100"

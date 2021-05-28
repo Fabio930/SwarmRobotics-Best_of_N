@@ -33,11 +33,11 @@ class Tree:
         else:
             if Tree.s == 0:
                 self.utility_mean = MAX_utility
-                self.utility_std = np.random.uniform(0,MAX_std)
+                self.utility_std = MAX_std
                 Tree.s = 1
             else:
                 self.utility_mean = MAX_utility/v
-                self.utility_std = np.random.uniform(0,MAX_std)
+                self.utility_std = MAX_std
 
     ##########################################################################
     #  returns a random leaf from the relative sub_tree

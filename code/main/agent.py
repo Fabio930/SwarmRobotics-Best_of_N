@@ -3,6 +3,7 @@ import sys,copy,math
 import numpy as np
 import logging as lg
 from main.tree import Tree
+from main.kalman import KalmanFilter
 ########################################################################################
 ## Agent
 ########################################################################################
@@ -50,7 +51,6 @@ class Agent:
 
         # identification
         self.id = Agent.num_agents
-
         if self.id == 0:
             # select the mode ('normal' or 'log')
             if config_element.attrib.get("mode") is not None:
@@ -71,27 +71,32 @@ class Agent:
                     print ("[ERROR] for tag <agent> in configuration file the parameter <prob_ascend> should be in [0,1]")
                     sys.exit(2)
                 Agent.P_a = a
+
             if config_element.attrib.get("prob_descend") is not None:
                 d = float(config_element.attrib["prob_descend"])
                 if d < 0 or d >1:
                     print ("[ERROR] for tag <agent> in configuration file the parameter <prob_descend> should be in [0,1]")
                     sys.exit(2)
                 Agent.P_d = d
+
             if Agent.P_a + Agent.P_d > 1:
                 print ("[ERROR] for tag <agent> in configuration file the sum <prob_ascend+prob_descend> should be in [0,1]")
                 sys.exit(2)
+
             if config_element.attrib.get("k") is not None:
                 k = float(config_element.attrib["k"])
                 if k<=0 or k>1:
                     print ("[ERROR] for tag <agent> in configuration file the parameter <k> should be in (0,1]")
                     sys.exit(2)
                 Agent.k = k
+
             if config_element.attrib.get("h") is not None:
                 h = float(config_element.attrib["h"])
                 if h<0 or h>1:
                     print ("[ERROR] for tag <agent> in configuration file the parameter <h> should be in [0,1]")
                     sys.exit(2)
                 Agent.h = h
+
             if Agent.h + Agent.k > 1:
                 print ("[ERROR] for tag <agent> in configuration file the sum <h+k> should be in (0,1]")
                 sys.exit(2)
@@ -108,6 +113,7 @@ class Agent:
         self.tree = Tree(self.arena.tree_branches,self.arena.tree_depth,self.arena.num_agents,0,0,1)
         self.init_tree = copy.deepcopy(self.tree)
 
+        self.kf = [KalmanFilter(0,1000,1,1)]*(Tree.num_nodes+1)
         Agent.num_agents += 1
 
         if Agent.mode == 'log':
@@ -146,7 +152,9 @@ class Agent:
             utility = 0
             for c in node.parent_node.child_nodes:
                 if c.id==node.id:
-                    c.utility_mean = c.utility_mean + (sensed_utility-c.utility_mean)
+                    self.kf[c.id].predict()
+                    self.kf[c.id].update(sensed_utility)
+                    c.utility_mean = self.kf[c.id].x
                     utility += c.utility_mean
                 else:
                     utility += c.utility_mean
