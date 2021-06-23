@@ -25,7 +25,7 @@ for dir in os.listdir(base):
                 hm.head()
                 hm = hm.pivot_table('N','x','r',fill_value=0)
                 # print(hm,'\n______________________')
-                hm = hm.reindex(np.arange(0,1.01,0.01), fill_value=0)
+                hm = hm.reindex(np.arange(0,1.02,0.02), fill_value=0)
                 # print(hm,'\n++++++++++++++++++++++')
                 ax=sns.heatmap(hm,cmap='coolwarm')
                 ax.set_xticks(np.arange(len(hm.columns)))
@@ -40,6 +40,24 @@ for dir in os.listdir(base):
                 ax.set_yticklabels(TICKS)
                 ax.invert_yaxis()
                 ax.set_xlabel('r')
+                # flag = list(elem)
+                # list(flag.pop(-1))
+                # list(flag.pop(-1))
+                # list(flag.pop(-1))
+                # list(flag.pop(-1))
+                # line = None
+                # for el in os.listdir(sub_path):
+                #     if el[-4]+el[-3]+el[-2]+el[-1] == '.txt':
+                #         fl = list(el)
+                #         list(fl.pop(-1))
+                #         list(fl.pop(-1))
+                #         list(fl.pop(-1))
+                #         list(fl.pop(-1))
+                #         if sub_path+str(fl) == sub_path+str(flag):
+                #             with open(sub_path+'/'+el) as f:
+                #                 line = f.read()
+                #
+                # plt.title('average settling time = '+str(line)+' steps')
                 plt.tight_layout()
                 plt.savefig(sub_path+'/'+sub_dir+'.png')
                 # plt.show()

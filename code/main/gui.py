@@ -154,23 +154,23 @@ class PysageGUI(object):
         self.w = tk.Canvas(self.master, width=int(a_width), height=int(a_height), background="#EEE")
         self.w.pack()
         self.length = 40
-        x1, y1 = 10, 20
+        x1, y1 = 8, 20
         y2 = self.length + y1
         node = self.arena.tree.catch_node(0)
         node.x,node.y1, node.y2 = x1,y1,y2
-        x2 = x1+10
+        x2 = x1+6
         self.w.create_rectangle(x1,y1,x2,y2,fill="white", outline="black")
         self.w.create_text(x1,y1,anchor="sw",text="a")
         self.node_agents[0] = self.w.create_rectangle(x1,y1,x2,y2,fill="blue")
         self.w.create_text(x1,y2+2,anchor="nw",text="id:0")
         # self.nodes_id[0] = self.w.create_oval(x1,y1,x2,y2, fill="white")
-        self.w.create_rectangle(x2+6,y1,x2+16,y2,fill="white", outline="black")
+        self.w.create_rectangle(x2+6,y1,x2+12,y2,fill="white", outline="black")
         self.w.create_text(x2+6,y1,anchor="sw",text="u")
         self.w.create_text(x2+30,y1,anchor="sw",text="a: % of agents")
         self.w.create_text(x2+30,y1+15,anchor="sw",text="u: % of utility")
         self.w.create_text(x2+30,y1+30,anchor="sw",text="id: node identifier")
 
-        self.utility_id[0] = self.w.create_rectangle(x2+6, y1 + (y2-y1)*(1 - node.utility_mean/self.arena.MAX_utility),x2+16,y2,fill="green")
+        self.utility_id[0] = self.w.create_rectangle(x2+6, y1 + (y2-y1)*(1 - node.utility_mean/self.arena.MAX_utility),x2+12,y2,fill="green")
         self.nodes_x = np.append(self.nodes_x,x1)
         self.paintTree(self.arena.tree_depth,x2,y2)
         self.arena.tree_copy=copy.deepcopy(self.arena.tree)
@@ -185,9 +185,9 @@ class PysageGUI(object):
                 if node.committed_agents[a] is not None:
                     sum+=1
             if n==0:
-                self.w.coords(self.node_agents[n], (node.x, node.y1 + (node.y2-node.y1)*(1 - sum/self.arena.num_agents),node.x+10,node.y2))
+                self.w.coords(self.node_agents[n], (node.x, node.y1 + (node.y2-node.y1)*(1 - sum/self.arena.num_agents),node.x+6,node.y2))
             else:
-                self.w.coords(self.node_agents[n], (node.x+10, node.y1 + (node.y2-node.y1)*(1 - sum/self.arena.num_agents),node.x+20,node.y2))
+                self.w.coords(self.node_agents[n], (node.x+6, node.y1 + (node.y2-node.y1)*(1 - sum/self.arena.num_agents),node.x+12,node.y2))
 
     def paintTree(self,depth,x2,y2):
         y1 = y2 + 20
@@ -195,22 +195,22 @@ class PysageGUI(object):
         for b in range(self.arena.tree_branches):
             if b == 0:
                 x1 = np.take(self.nodes_x,-1)
-                x2 = x1 + 10
+                x2 = x1 + 6
             else:
-                x1 = 30 + np.take(self.nodes_x,-1) + 10
-                x2 = x1 + 10
+                x1 = 15 + np.take(self.nodes_x,-1) + 6
+                x2 = x1 + 6
 
             node = self.arena.tree.catch_node(len(self.nodes_x))
             node.x,node.y1, node.y2 = x1,y1,y2
             self.nodes_x = np.append(self.nodes_x,x1)
             # self.nodes_id[node.id]= self.w.create_oval(x1,y1,x2,y2, fill="white")
-            self.w.create_rectangle(x2,y1,x2+10,y2,fill="white", outline="black")
-            self.node_agents[node.id] = self.w.create_rectangle(x2, y2,x2+10,y2,fill="blue")
-            x2 = x2 + 10
-            self.w.create_text(x1+10,y2+2,anchor="nw",text="id:"+str(node.id))
+            self.w.create_rectangle(x2,y1,x2+6,y2,fill="white", outline="black")
+            self.node_agents[node.id] = self.w.create_rectangle(x2, y2,x2+6,y2,fill="blue")
+            x2 = x2 + 6
+            self.w.create_text(x1+6,y2+2,anchor="nw",text=str(node.id))
 
-            self.w.create_rectangle(x2+6,y1,x2+16,y2,fill="white", outline="black")
-            self.utility_id[node.id] = self.w.create_rectangle(x2+6, y1 + (y2-y1)*(1 - node.utility_mean/self.arena.MAX_utility),x2+16,y2,fill="green")
+            self.w.create_rectangle(x2+6,y1,x2+12,y2,fill="white", outline="black")
+            self.utility_id[node.id] = self.w.create_rectangle(x2+6, y1 + (y2-y1)*(1 - node.utility_mean/self.arena.MAX_utility),x2+12,y2,fill="green")
             self.paint_util(depth-1,x2,y2,b)
 
     def paint_util(self,depth,x2,y2,r):
@@ -218,17 +218,16 @@ class PysageGUI(object):
             y1 = y2 + 20
             y2 = y1 + self.length
             for b in range(self.arena.tree_branches):
-                x1 = 30 + np.take(self.nodes_x,-1) + 10
-                x2 = x1 + 10
+                x1 = 20 + np.take(self.nodes_x,-1) + 6
+                x2 = x1 + 6
                 node = self.arena.tree.catch_node(len(self.nodes_x))
                 node.x,node.y1, node.y2 = x1,y1,y2
                 self.nodes_x = np.append(self.nodes_x,x1)
-                # self.nodes_id[node.id]= self.w.create_oval(x1,y1,x2,y2, fill="white")
-                self.w.create_rectangle(x2,y1,x2+10,y2,fill="white", outline="black")
-                self.node_agents[node.id] = self.w.create_rectangle(x2, y2,x2+10,y2,fill="blue")
-                x2 = x2 + 10
-                self.w.create_text(x1+10,y2+2,anchor="nw",text="id:"+str(node.id))
+                self.w.create_rectangle(x2,y1,x2+6,y2,fill="white", outline="black")
+                self.node_agents[node.id] = self.w.create_rectangle(x2, y2,x2+6,y2,fill="blue")
+                x2 = x2 + 6
+                self.w.create_text(x1+6,y2+2,anchor="nw",text=str(node.id))
 
-                self.w.create_rectangle(x2+6,y1,x2+16,y2,fill="white", outline="black")
-                self.utility_id[node.id] = self.w.create_rectangle(x2+6,  y1 + (y2-y1)*(1 - node.utility_mean/self.arena.MAX_utility),x2+16,y2,fill="green")
+                self.w.create_rectangle(x2+6,y1,x2+12,y2,fill="white", outline="black")
+                self.utility_id[node.id] = self.w.create_rectangle(x2+6,  y1 + (y2-y1)*(1 - node.utility_mean/self.arena.MAX_utility),x2+12,y2,fill="green")
                 self.paint_util(depth-1,x2,y2,r)

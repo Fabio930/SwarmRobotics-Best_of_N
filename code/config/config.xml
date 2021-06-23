@@ -4,21 +4,21 @@
     <gui/>
     <arena
           MAX_utility="10"
-          MAX_std="6"
+          MAX_std=".5"
           num_agents="100"
           max_steps="1000"
           num_runs="100"
           tree_branches="2"
-          tree_depth="2"
-          v="1.2"
+          tree_depth="1"
+          k=".85"
+          structure='unknown'
           >
           <agent
-                communication_range='limited'
+                P_a='0.7'
+                P_d='0.3'
                 k=".3"
                 h=".7"
-                />
-          <target
-            quality ="1"
+                alpha=".7"
                 />
     </arena>
 </configuration>

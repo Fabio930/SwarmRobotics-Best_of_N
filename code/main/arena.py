@@ -44,6 +44,12 @@ class Arena:
             sys.exit(2)
         self.num_agents = int(config_element.attrib["num_agents"])
 
+        self.structure = 'known'
+        if config_element.attrib.get("structure") is not None:
+            a = config_element.attrib["structure"]
+            if a =='unknown':
+                self.structure='unknown'
+
         # maximum utility for leaf nodes
         self.MAX_utility = 10
         if config_element.attrib.get("MAX_utility") is not None:
@@ -59,11 +65,11 @@ class Arena:
                 print ("[ERROR] attribute 'MAX_std' in tag <arena> must be in [0,)")
                 sys.exit(2)
 
-        self.v = 1
-        if config_element.attrib.get("v") is not None:
-            self.v = float(config_element.attrib["v"])
-            if self.v < 1:
-                print ("[ERROR] attribute 'v' in tag <arena> must be in [1,)")
+        self.k = 1
+        if config_element.attrib.get("k") is not None:
+            self.k = float(config_element.attrib["k"])
+            if self.k<0 or self.k>1:
+                print ("[ERROR] attribute 'k' in tag <arena> must be in [0,1]")
                 sys.exit(2)
 
         # number of runs to execute
@@ -92,13 +98,14 @@ class Arena:
         for i in range(self.tree_depth+1):
             self.num_nodes += self.tree_branches**i
 
-        self.tree = Tree(self.tree_branches,self.tree_depth,self.num_agents,self.MAX_utility,self.MAX_std,self.v)
+        self.tree = Tree(self.tree_branches,self.tree_depth,self.num_agents,self.MAX_utility,self.MAX_std,self.k,0)
 
         self.create_agents(config_element)
         self.initialize_agents()
         self.tree.update_tree_utility()
         self.tree_copy = copy.deepcopy(self.tree)
 
+        self.time = None
     ##########################################################################
     # create the agents
     def create_agents( self, config_element ):
@@ -138,6 +145,7 @@ class Arena:
     def init_experiment( self ):
         print('Experiment started')
         self.num_steps = 0
+        self.time = None
         self.tree = copy.deepcopy(self.tree_copy)
         for agent in self.agents:
             agent.init_experiment()
@@ -155,11 +163,22 @@ class Arena:
         # first, call the control() function for each agent,
         # which computes the desired motion and the next agent state
         for a in self.agents:
-            a.control()
-
+            a.control(self.structure)
+            if self.time==None:
+                for i in self.tree.get_leaf_nodes():
+                    flag = 0
+                    if i.id == self.tree.catch_best_lnode().id:
+                        sflag = 'A'
+                    else:
+                        sflag = 'B'
+                    for j in i.committed_agents:
+                        if j is not None:
+                            flag += 1
+                    if flag >= 0.9*self.num_agents:
+                        self.time = [self.num_steps,sflag]
         # then, apply the desired motion and update the agent state
         for a in self.agents:
-            a.update()
+            a.update(self.structure)
             prev_node = self.tree.catch_node(a.prev_position)
             prev_node.committed_agents[a.id] = None
             node = self.tree.catch_node(a.position)
@@ -176,18 +195,29 @@ class Arena:
 
     ##########################################################################
     # return the list of agents
-    def get_neighbour_agents( self, agent, ref='infinite'):
+    def get_neighbour_agents( self, agent):
         neighbour_list = []
-        if ref == 'infinite':
-            for a in self.agents:
-                if a is not agent :
+        support = []
+        node = self.tree.catch_node(agent.position)
+        for a in self.agents:
+            if a is not agent :
+                flag = node.catch_node(a.position)
+                if flag is not None:
                     neighbour_list.append(a)
-        else:
-            for a in self.agents:
-                if a is not agent :
-                    if agent.is_neighbour(a):
+                    if flag.id == node.id:
+                        support.append('same')
+                    else:
+                        support.append('sub_tree')
+                elif node.parent_node is not None:
+                    if node.parent_node.id == a.position:
                         neighbour_list.append(a)
-        return neighbour_list
+                        support.append('parent')
+
+                    elif node.get_sibling_node(a.position) is not None:
+                        neighbour_list.append(a)
+                        support.append('sibling')
+
+        return neighbour_list,support
 
     ##########################################################################
     # return a the utility of a random leaf node with his id
@@ -197,9 +227,5 @@ class Arena:
             selected_node = np.random.choice(node.child_nodes)
             return self.get_node_utility(selected_node.id)
         else:
-            value = np.random.normal(self.tree.catch_node(node_id).utility_mean,self.tree.catch_node(node_id).utility_std)
-            if value < 0:
-                value = 0
-            elif value > self.MAX_utility:
-                value = self.MAX_utility
-            return node_id , value
+            value = self.tree.catch_node(node_id).utility_mean + np.random.normal(0,self.tree.catch_node(node_id).utility_std)
+        return node_id , value

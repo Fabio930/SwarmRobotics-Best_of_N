@@ -76,8 +76,8 @@ def start(argv):
             if arena.random_seed is None:
                 arena.set_random_seed()
             else:
-                arena.run_id += arena.random_seed
-                arena.set_random_seed(arena.run_id)
+                arena.random_seed = arena.run_id
+                arena.set_random_seed(arena.random_seed)
             arena.init_experiment()
             arena.run_experiment()
             results.update()

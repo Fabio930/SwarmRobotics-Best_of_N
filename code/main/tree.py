@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import random
+import random,copy
 import numpy as np
+from main.utility_filter import Filter
 
 ##########################################################################
 # main tree class
@@ -11,33 +12,54 @@ class Tree:
     s = 0
     ##########################################################################
     # standart class init
-    def __init__(self, num_childs,depth,num_agents,MAX_utility,MAX_std,v):
+    def __init__(self, num_childs,depth,num_agents,MAX_utility,MAX_std,k,alpha,ref = 'arena'):
+        if ref == 'arena':
+            self.x, self.y1, self.y2 = 0,0,0
+            self.alpha=float(alpha)
+            self.id = Tree.num_nodes
+            self.utility_mean = 0
+            self.utility_std = 0
+            self.committed_agents = [None]*num_agents
+            self.parent_node = None
+            self.child_nodes = [None]*num_childs
 
-        self.x, self.y1, self.y2 = 0,0,0
-
-        self.id = Tree.num_nodes
-        self.utility_mean = 0
-        self.utility_std = 0
-
-        self.committed_agents = [None]*num_agents
-        self.targets =  np.array([])
-
-        self.parent_node = None
-        self.child_nodes = [None]*num_childs
-        if depth > 0:
-            for c in range(num_childs):
-                Tree.num_nodes += 1
-                child = Tree(num_childs,depth-1,num_agents,MAX_utility,MAX_std,v)
-                child.parent_node = self
-                self.child_nodes[c] = child
-        else:
-            if Tree.s == 0:
-                self.utility_mean = MAX_utility
-                self.utility_std = MAX_std
-                Tree.s = 1
+            if depth > 0:
+                for c in range(num_childs):
+                    Tree.num_nodes += 1
+                    child = Tree(num_childs,depth-1,num_agents,MAX_utility,MAX_std,k,alpha,ref)
+                    child.parent_node = self
+                    self.child_nodes[c] = child
             else:
-                self.utility_mean = MAX_utility/v
-                self.utility_std = MAX_std
+                if Tree.s == 0:
+                    self.utility_mean = MAX_utility
+                    self.utility_std = MAX_std
+                    Tree.s = 1
+                else:
+                    self.utility_mean = MAX_utility*k
+                    self.utility_std = MAX_std
+
+        elif ref == 'known':
+            self.x, self.y1, self.y2 = 0,0,0
+            self.alpha=float(alpha)
+            self.id = Tree.num_nodes
+            self.committed_agents = [None]*num_agents
+            self.parent_node = None
+            self.child_nodes = [None]*num_childs
+            self.filter = Filter(alpha)
+            if depth > 0:
+                for c in range(num_childs):
+                    Tree.num_nodes += 1
+                    child = Tree(num_childs,depth-1,num_agents,MAX_utility,MAX_std,k,alpha,ref)
+                    child.parent_node = self
+                    self.child_nodes[c] = child
+        else:
+            self.x, self.y1, self.y2 = 0,0,0
+            self.alpha=float(alpha)
+            self.id = 0
+            self.committed_agents = [None]*num_agents
+            self.parent_node = None
+            self.child_nodes = [None]
+            self.filter = Filter(alpha)
 
     ##########################################################################
     #  returns a random leaf from the relative sub_tree
@@ -63,7 +85,7 @@ class Tree:
     def catch_node(self,node_id):
         if self.id == node_id:
             return self
-        if self.child_nodes[0] is not None:
+        elif self.child_nodes[0] is not None:
             for c in self.child_nodes:
                 child = c.catch_node(node_id)
                 if child is not None:
@@ -73,7 +95,6 @@ class Tree:
     ##########################################################################
     #  search the leaf node with the max utility or the nodes in case of equalty
     def catch_best_lnode(self):
-        best = np.array([])
         leafs = self.get_leaf_nodes()
         MAX = 0
         pos = 0
@@ -81,23 +102,19 @@ class Tree:
             if leafs[l].utility_mean > MAX:
                 MAX = leafs[l].utility_mean
                 pos = l
-        best = np.append(best,leafs[pos])
-        for l in range(len(leafs)):
-            if (l != pos) and (leafs[l].utility_mean == MAX):
-                best = np.append(best,leafs[pos])
-        return best
+        return leafs[pos]
 
     ##########################################################################
     def get_sub_node(self,node_id):
         for c in self.child_nodes:
-            if c.catch_node(node_id) is not None:
+            if c is not None and c.catch_node(node_id) is not None:
                 return c
         return None
 
     def get_sibling_node(self,node_id):
         for c in self.parent_node.child_nodes:
             if c.id != self.id:
-                if c.catch_node(node_id) is not None:
+                if c is not None and c.catch_node(node_id) is not None:
                     return c
         return None
 
@@ -109,3 +126,15 @@ class Tree:
                 c.update_tree_utility()
                 self.utility_mean += c.utility_mean
             self.utility_mean = self.utility_mean/len(self.child_nodes)
+
+    ##########################################################################
+
+    def add_child(self,selected_node):
+        if self.child_nodes[0] is None:
+            self.child_nodes[0]=copy.copy(selected_node)
+        else:
+            self.child_nodes.append(copy.copy(selected_node))
+        self.child_nodes[-1].parent_node = self
+        self.child_nodes[-1].committed_agents = [None]*len(selected_node.committed_agents)
+        self.child_nodes[-1].child_nodes = [None]
+        self.child_nodes[-1].filter = Filter(self.alpha)
