@@ -1,24 +1,25 @@
 <?xml version="1.0"?>
 
 <configuration>
-    <gui/>
+    <!-- <gui/> -->
     <arena
           MAX_utility="10"
-          MAX_std=".5"
+          MAX_std="1"
           num_agents="100"
           max_steps="1000"
           num_runs="100"
-          tree_branches="2"
+          tree_branches="8"
           tree_depth="1"
-          k=".85"
-          structure='unknown'
+          k="1"
+          structure='known'
           >
           <agent
-                P_a='0.7'
-                P_d='0.3'
-                k=".3"
-                h=".7"
-                alpha=".7"
+                P_a='.1'
+                P_d='.1'
+                h="0.9167"
+                k="0.0833"
+                alpha=".8"
+                beta =".2"
                 />
     </arena>
 </configuration>

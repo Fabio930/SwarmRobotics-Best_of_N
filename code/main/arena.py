@@ -35,6 +35,7 @@ class Arena:
     # standart class init
     def __init__( self, config_element ):
 
+        self.agent_position_record = {}
         # random seed
         self.random_seed = None if config_element.attrib.get("random_seed") is None else int(config_element.attrib["random_seed"])
 
@@ -98,7 +99,7 @@ class Arena:
         for i in range(self.tree_depth+1):
             self.num_nodes += self.tree_branches**i
 
-        self.tree = Tree(self.tree_branches,self.tree_depth,self.num_agents,self.MAX_utility,self.MAX_std,self.k,0)
+        self.tree = Tree(self.tree_branches,self.tree_depth,self.num_agents,self.MAX_utility,self.MAX_std,self.k,0,0)
 
         self.create_agents(config_element)
         self.initialize_agents()
@@ -143,12 +144,14 @@ class Arena:
     ##########################################################################
     # initialisation/reset of the experiment variables
     def init_experiment( self ):
-        print('Experiment started')
+        print('Experiment started',', r: '+str(round(self.agents[0].h/self.agents[0].k,2)))
         self.num_steps = 0
         self.time = None
         self.tree = copy.deepcopy(self.tree_copy)
-        for agent in self.agents:
-            agent.init_experiment()
+
+        for a in self.agents:
+            self.agent_position_record.update({a.id:np.array([])})
+            a.init_experiment()
 
     ##########################################################################
     # run experiment until finished
@@ -156,14 +159,6 @@ class Arena:
         print('Running')
         while not self.experiment_finished():
             self.update()
-
-    ##########################################################################
-    # updates the simulation state
-    def update( self ):
-        # first, call the control() function for each agent,
-        # which computes the desired motion and the next agent state
-        for a in self.agents:
-            a.control(self.structure)
             if self.time==None:
                 for i in self.tree.get_leaf_nodes():
                     flag = 0
@@ -176,14 +171,24 @@ class Arena:
                             flag += 1
                     if flag >= 0.9*self.num_agents:
                         self.time = [self.num_steps,sflag]
+
+    ##########################################################################
+    # updates the simulation state
+    def update( self ):
+        # first, call the control() function for each agent,
+        # which computes the desired motion and the next agent state
+        for a in self.agents:
+            if self.run_id==1 or self.run_id%10==0:
+                if self.num_steps%10==0 or self.num_steps==0:
+                    self.agent_position_record.update({a.id:np.append(self.agent_position_record.get(a.id),a.position)})
+            a.control()
         # then, apply the desired motion and update the agent state
         for a in self.agents:
-            a.update(self.structure)
+            a.update()
             prev_node = self.tree.catch_node(a.prev_position)
             prev_node.committed_agents[a.id] = None
             node = self.tree.catch_node(a.position)
             node.committed_agents[a.id] = a
-
         self.num_steps += 1
 
     ##########################################################################
@@ -195,37 +200,32 @@ class Arena:
 
     ##########################################################################
     # return the list of agents
-    def get_neighbour_agents( self, agent):
-        neighbour_list = []
-        support = []
+    def get_neighbor_agents( self, agent):
+        neighbor_list = []
         node = self.tree.catch_node(agent.position)
         for a in self.agents:
             if a is not agent :
-                flag = node.catch_node(a.position)
-                if flag is not None:
-                    neighbour_list.append(a)
-                    if flag.id == node.id:
-                        support.append('same')
-                    else:
-                        support.append('sub_tree')
-                elif node.parent_node is not None:
-                    if node.parent_node.id == a.position:
-                        neighbour_list.append(a)
-                        support.append('parent')
+                if a.position==agent.position:
+                    neighbor_list.append([a,a.position])
+                else:
+                    flag = node.get_sub_node(a.position)
+                    if flag is not None:
+                        neighbor_list.append([a,flag.id])
+                    elif node.parent_node is not None:
+                        if node.parent_node.id == a.position:
+                            neighbor_list.append([a,a.position])
 
-                    elif node.get_sibling_node(a.position) is not None:
-                        neighbour_list.append(a)
-                        support.append('sibling')
+                        elif node.get_sibling_node(a.position) is not None:
+                            neighbor_list.append([a,node.get_sibling_node(a.position).id])
 
-        return neighbour_list,support
+        return neighbor_list
 
     ##########################################################################
     # return a the utility of a random leaf node with his id
     def get_node_utility(self,node_id):
         node = self.tree.catch_node(node_id)
         if node.child_nodes[0] is not None:
-            selected_node = np.random.choice(node.child_nodes)
-            return self.get_node_utility(selected_node.id)
+            return self.get_node_utility(np.random.choice(node.child_nodes).id)
         else:
-            value = self.tree.catch_node(node_id).utility_mean + np.random.normal(0,self.tree.catch_node(node_id).utility_std)
-        return node_id , value
+            node = self.tree.catch_node(node_id)
+            return node.id , node.utility_mean + np.random.normal(0,node.utility_std)

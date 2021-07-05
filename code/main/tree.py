@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import random,copy
+import random
 import numpy as np
 from main.utility_filter import Filter
 
@@ -12,7 +12,7 @@ class Tree:
     s = 0
     ##########################################################################
     # standart class init
-    def __init__(self, num_childs,depth,num_agents,MAX_utility,MAX_std,k,alpha,ref = 'arena'):
+    def __init__(self, num_childs,depth,num_agents,MAX_utility,MAX_std,k,alpha,reg,ref = 'arena'):
         if ref == 'arena':
             self.x, self.y1, self.y2 = 0,0,0
             self.alpha=float(alpha)
@@ -26,7 +26,7 @@ class Tree:
             if depth > 0:
                 for c in range(num_childs):
                     Tree.num_nodes += 1
-                    child = Tree(num_childs,depth-1,num_agents,MAX_utility,MAX_std,k,alpha,ref)
+                    child = Tree(num_childs,depth-1,num_agents,MAX_utility,MAX_std,k,alpha,reg,ref)
                     child.parent_node = self
                     self.child_nodes[c] = child
             else:
@@ -47,9 +47,16 @@ class Tree:
             self.child_nodes = [None]*num_childs
             self.filter = Filter(alpha)
             if depth > 0:
+                if self.parent_node is not None:
+                    flag = self.parent_node.filter.alpha - const
+                    if flag >=0:
+                        self.alpha = flag
+                    else:
+                        self.alpha = 0
+                    self.filter.set_alpha(self.alpha)
                 for c in range(num_childs):
                     Tree.num_nodes += 1
-                    child = Tree(num_childs,depth-1,num_agents,MAX_utility,MAX_std,k,alpha,ref)
+                    child = Tree(num_childs,depth-1,num_agents,MAX_utility,MAX_std,k,alpha,reg,ref)
                     child.parent_node = self
                     self.child_nodes[c] = child
         else:
@@ -112,10 +119,11 @@ class Tree:
         return None
 
     def get_sibling_node(self,node_id):
-        for c in self.parent_node.child_nodes:
-            if c.id != self.id:
-                if c is not None and c.catch_node(node_id) is not None:
-                    return c
+        if self.parent_node is not None:
+            for c in self.parent_node.child_nodes:
+                if c.id != self.id:
+                    if c is not None and c.catch_node(node_id) is not None:
+                        return c
         return None
 
     ##########################################################################
@@ -129,12 +137,16 @@ class Tree:
 
     ##########################################################################
 
-    def add_child(self,selected_node):
+    def add_child(self,selected_node,const):
         if self.child_nodes[0] is None:
-            self.child_nodes[0]=copy.copy(selected_node)
+            self.child_nodes[0]=Tree(0,0,len(selected_node.committed_agents),0,0,0,selected_node.alpha,const,'unknown')
         else:
-            self.child_nodes.append(copy.copy(selected_node))
+            self.child_nodes.append(Tree(0,0,len(selected_node.committed_agents),0,0,0,selected_node.alpha,const,'unknown'))
         self.child_nodes[-1].parent_node = self
-        self.child_nodes[-1].committed_agents = [None]*len(selected_node.committed_agents)
-        self.child_nodes[-1].child_nodes = [None]
-        self.child_nodes[-1].filter = Filter(self.alpha)
+        self.child_nodes[-1].id = selected_node.id
+        flag = self.filter.alpha - const
+        if flag >=0:
+            self.child_nodes[-1].alpha = flag
+        else:
+            self.child_nodes[-1].alpha = 0
+        self.child_nodes[-1].filter.set_alpha(self.child_nodes[-1].alpha)

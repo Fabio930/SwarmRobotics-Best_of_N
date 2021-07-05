@@ -34,6 +34,8 @@ class Agent:
     mode = 'normal'
     num_agents = 0
     arena = None
+    alpha = .8
+    beta = .025
     k = .3
     h = .7
     size = 0.33
@@ -49,18 +51,10 @@ class Agent:
 
         # identification
         self.id = Agent.num_agents
-        self.alpha = 0
 
+        # agent class' attributes
         if self.id == 0:
-            # select the mode ('normal' or 'log')
-            if config_element.attrib.get("mode") is not None:
-                if config_element.attrib.get("mode") == 'log':
-                    Agent.mode = 'log'
-
-            # reference to the arena
             Agent.arena = arena
-
-            # agent class' attributes
             if config_element.attrib.get("P_a") is not None:
                 a = float(config_element.attrib["P_a"])
                 if a < 0 or a >1:
@@ -74,10 +68,6 @@ class Agent:
                     print ("[ERROR] for tag <agent> in configuration file the parameter <P_d> should be in [0,1]")
                     sys.exit(2)
                 Agent.P_d = d
-
-            if Agent.P_a + Agent.P_d > 1:
-                print ("[ERROR] for tag <agent> in configuration file the sum <P_a+P_d> should be in [0,1]")
-                sys.exit(2)
 
             if config_element.attrib.get("k") is not None:
                 k = float(config_element.attrib["k"])
@@ -98,35 +88,46 @@ class Agent:
                 sys.exit(2)
 
             if config_element.attrib.get("alpha") is not None:
-                self.alpha = float(config_element.attrib["alpha"])
-                if self.alpha<0 or self.alpha>1:
+                a = float(config_element.attrib["alpha"])
+                if a<0 or a>1:
                     print ("[ERROR] for tag <agent> in configuration file the parameter <alpha> should be in (0,1]")
                     sys.exit(2)
-            else:
-                print ("[ERROR] for tag <agent> in configuration file the parameter <alpha> is missing")
-                sys.exit(2)
+                Agent.alpha = a
 
+            if config_element.attrib.get("beta") is not None:
+                a = float(config_element.attrib["beta"])
+                if a <0 or a>1:
+                    print ("[ERROR] for tag <agent> in configuration file the parameter <beta> should be in (0,1]")
+                    sys.exit(2)
+                Agent.beta = a
+
+            if Agent.mode == 'log':
+                lg.basicConfig(filename='history.log',
+                            filemode='a',
+                            format='%(asctime)s - %(levelname)s: %(message)s',
+                            datefmt='%H:%M:%S',
+                            level= lg.INFO)
         # state (0=descending,1=ascending)
         self.state = 0
 
         # position is the id of the current node
         self.position = 0
         self.prev_position = 0
-        self.next_pos = 0
+        self.sensing = None
 
         # world representation
         Tree.num_nodes = 0
-        self.tree = Tree(self.arena.tree_branches,self.arena.tree_depth,self.arena.num_agents,0,0,1,self.alpha,self.arena.structure)
+        self.tree = Tree(Agent.arena.tree_branches,Agent.arena.tree_depth,Agent.arena.num_agents,0,0,1,Agent.alpha,Agent.beta,Agent.arena.structure)
         self.init_tree = copy.deepcopy(self.tree)
 
         Agent.num_agents += 1
 
-        if Agent.mode == 'log':
-            lg.basicConfig(filename='history.log',
-                        filemode='a',
-                        format='%(asctime)s - %(levelname)s: %(message)s',
-                        datefmt='%H:%M:%S',
-                        level= lg.INFO)
+
+
+    ##########################################################################
+
+    def get_a_b(self):
+        return Agent.alpha,Agent.beta
 
     ##########################################################################
     # generic init function brings back to initial positions
@@ -134,132 +135,118 @@ class Agent:
         self.tree = copy.deepcopy(self.init_tree)
         self.state = 0
         self.position = 0
-        self.next_pos = 0
         self.prev_position = 0
+        self.sensing = None
 
     ##########################################################################
     # update the utilities of the world model and choose the next state of the agent
-    def control(self,ref):
-        node = self.arena.tree.catch_node(self.position)
-        leaf_id, leaf_utility = Agent.arena.get_node_utility(node.id)
-        temp = Agent.arena.tree.catch_node(self.position).get_sub_node(leaf_id)
-        if temp is not None:
-            self.next_pos = temp.id
-
-        if ref =='known':
-            self.update_world_utilities(self.tree.catch_node(leaf_id),leaf_utility)
-        else:
-            self.update_node_utility(leaf_utility,leaf_id,None)
+    def control(self):
+        node = Agent.arena.tree.catch_node(self.position)
+        if node.child_nodes[0] is not None:
+            if self.tree.catch_node(self.position).child_nodes[0] is None:
+                for n in node.child_nodes:
+                    self.tree.catch_node(self.position).add_child(n,Agent.beta)
         p = np.random.uniform(0,1)
         if self.state == 0 and p < Agent.P_a:
             self.state = 1
         elif self.state ==1 and p < Agent.P_d:
             self.state = 0
 
-        if Agent.mode == 'log':
-            lg.info(f'Agent #{self.id} is in new state {self.state}.')
+        # lg.info(f'Agent #{self.id} is in new state {self.state}.')
 
     ##########################################################################
     # propagates the info gathered in the current node to the parent nodes
-    def update_world_utilities(self,node,sensed_utility):
-        if node.parent_node is not None:
-            utility = 0
-            for c in node.parent_node.child_nodes:
-                # print(self.id,',',c.id,c.filter.utility)
 
-                if c.id==node.id:
-                    c.filter.update_utility(sensed_utility)
-                    utility += c.filter.utility
-                else:
-                    utility += c.filter.utility
-            node.parent_node.filter.overwrite_utility(utility/len(node.parent_node.child_nodes))
-            self.update_world_utilities(node.parent_node,sensed_utility)
-
-    def update_node_utility(self,sensed_utility,leaf_id,ref):
-        next = self.tree.catch_node(self.next_pos)
+    def update_world_utility(self,sensed_utility,leaf_id,ref):
         leaf = self.tree.catch_node(leaf_id)
-        if leaf is not None:
-            self.update_world_utilities(leaf,sensed_utility)
+        if ref == None:
+            if leaf is None:
+                leaf = self.tree.catch_node(self.sensing)
+            leaf.filter.update_utility(sensed_utility)
+            for c in leaf.parent_node.child_nodes:
+                if c is not None:
+                    leaf.parent_node.filter.update_utility(c.filter.utility)
+            self.update_world_utility(sensed_utility,leaf_id,leaf.parent_node)
         else:
-            if next is None:
-                self.tree.catch_node(self.position).add_child(Agent.arena.tree.catch_node(self.next_pos))
-            node = self.tree.catch_node(self.next_pos)
-            if ref == None:
-                node.filter.update_utility(sensed_utility)
-                # print(node.id,node.filter.utility)
-                if node.parent_node is not None:
-                    utility = 0
-                    for c in node.parent_node.child_nodes:
-                        if c is not None:
-                            utility += c.filter.utility
-                    if utility > 0:
-                        node.parent_node.filter.overwrite_utility(utility/len(node.parent_node.child_nodes))
-                        self.update_node_utility(sensed_utility,leaf_id,node.parent_node)
-            else:
-                if ref.parent_node is not None:
-                    utility = 0
-                    for c in ref.parent_node.child_nodes:
-                        if c is not None:
-                            utility += c.filter.utility
-                    if utility > 0:
-                        ref.parent_node.filter.overwrite_utility(utility/len(ref.parent_node.child_nodes))
-                        self.update_node_utility(sensed_utility,leaf_id,ref.parent_node)
+            if ref.parent_node is not None:
+                for c in ref.parent_node.child_nodes:
+                    if c is not None:
+                        ref.parent_node.filter.update_utility(c.filter.utility)
+                self.update_world_utility(sensed_utility,leaf_id,ref.parent_node)
 
 
     ##########################################################################
     # save position and choose a new one
-    def update(self,ref):
+    def update(self):
         self.prev_position = self.position
-        neighbours = Agent.arena.get_neighbour_agents(self)
-        self.update_neighbours_position(neighbours,ref)
+        neighbors = Agent.arena.get_neighbor_agents(self)
+        self.update_neighbors_position(neighbors)
         if self.state == 0:
-            self.descending(neighbours)
+            self.descending(neighbors)
         else:
-            self.ascending(neighbours)
+            self.ascending(neighbors)
 
     ##########################################################################
     # updates the agent position in the tree structure
-    def update_neighbours_position(self,agents,ref):
-        if ref =='known':
-            for a in agents[0]:
-                prev_node = self.tree.catch_node(a.prev_position)
-                prev_node.committed_agents[a.id] = None
-                node = self.tree.catch_node(a.position)
-                node.committed_agents[a.id] = a
-        else:
-            for a in agents[0]:
-                prev_node = self.tree.catch_node(a.prev_position)
-                if prev_node is not None:
-                    prev_node.committed_agents[a.id] = None
-                node = self.tree.catch_node(a.position)
-                if node is not None:
-                    node.committed_agents[a.id] = a
+    def update_neighbors_position(self,agents):
+        for a in agents:
+            actual = self.tree.catch_node(a[0].position)
+            self.reset_committedAgents_list(self.tree.catch_node(0),a[0].id)
+            if actual is not None:
+                actual.committed_agents[a[0].id] = a
+            else:
+                actual = self.tree.catch_node(a[1])
+                actual.committed_agents[a[0].id] = a
 
-        if Agent.mode == 'log':
-            lg.info(f'Agent #{self.id} from node {self.position} sees {len(agents[0])} agents.')
+
+        # lg.info(f'Agent #{self.id} from node {self.position} sees {len(agents)} agents.')
+
+    ##########################################################################
+    def get_id_utility(self):
+        node = self.tree.catch_node(self.position)
+        return node.id, node.filter.utility
+
+    def reset_committedAgents_list(self,node,agent_id):
+        node.committed_agents[agent_id] = None
+        if node.child_nodes[0] is not None:
+            for i in node.child_nodes:
+                self.reset_committedAgents_list(i,agent_id)
 
     ##########################################################################
     # descending transition
     def descending(self,agents):
-        selected_node=self.tree.catch_node(self.next_pos)
-        if selected_node.filter.utility < 0:
-            percent = 0
-        elif selected_node.filter.utility < Agent.arena.MAX_utility:
-            percent = selected_node.filter.utility/Agent.arena.MAX_utility
+        commitment = 0
+        node = self.tree.catch_node(self.position)
+        if node.child_nodes[0] is not None:
+            selected_node = np.random.choice(node.child_nodes)
+            leaf_id, leaf_utility = Agent.arena.get_node_utility(selected_node.id)
+            self.sensing=selected_node.id
+            self.update_world_utility(leaf_utility,leaf_id,None)
+            if selected_node.filter.utility == None or selected_node.filter.utility < 0:
+                percent = 0
+            elif selected_node.filter.utility < Agent.arena.MAX_utility:
+                percent = selected_node.filter.utility/Agent.arena.MAX_utility
+            else:
+                percent = 1
+            # print(percent,'dk',self.id,self.position)
+            commitment = Agent.k * percent
         else:
-            percent = 1
-        # print(percent,'dk',self.id,self.position,self.next_pos)
-        committment = Agent.k * percent
+            leaf_id, leaf_utility = Agent.arena.get_node_utility(node.id)
+            self.sensing=node.id
+            self.update_world_utility(leaf_utility,leaf_id,None)
         agent_node = None
 
-        if len(agents[0]) > 0:
-            agent = np.random.choice(agents[0])
-            arena_node = Agent.arena.tree.catch_node(self.position)
-            agent_node = arena_node.get_sub_node(agent.position)
+        if len(agents) > 0:
+            id = np.random.choice(np.arange(len(agents)))
+            agent = agents[id]
+            agent_node = node.get_sub_node(agent[1])
         recruitment = 0
 
         if agent_node is not None:
-            utility=agent.tree.catch_node(agent.position).filter.utility
+            leaf_id,leaf_utility=agent[0].get_id_utility()
+            self.sensing=agent_node.id
+            self.update_world_utility(leaf_utility,leaf_id,None)
+            utility = self.tree.catch_node(self.sensing).filter.utility
             if utility<= 0:
                 percent = 0
             elif utility < Agent.arena.MAX_utility:
@@ -269,22 +256,17 @@ class Agent:
             # print(percent,'dh',self.id,self.position,agent.position)
             recruitment = Agent.h * percent
         p = np.random.uniform(0,1)
-        if p < committment:
+        if p < commitment:
             self.position = selected_node.id
             # print('committed',self.position)
-            if Agent.mode == 'log':
-                lg.info(f'Agent #{self.id} in node {self.prev_position} is committed to node {selected_node.id}.')
-        elif p < committment + recruitment:
-            if self.tree.catch_node(agent_node.id) is None:
-                self.tree.catch_node(self.position).add_child(agent.tree.catch_node(agent_node.id))
+            # lg.info(f'Agent #{self.id} in node {self.prev_position} is committed to node {selected_node.id}.')
+        elif p < commitment + recruitment:
             self.position = agent_node.id
-            # print('recruited',self.position)
+        #    print('recruited',self.position)
 
-            if Agent.mode == 'log':
-                lg.info(f'Agent #{self.id} in node {self.prev_position} is recruited to node {agent_node.id}.')
-        else:
-            if Agent.mode == 'log':
-                lg.info(f'Agent #{self.id} stays in node {self.position}.')
+        #     lg.info(f'Agent #{self.id} in node {self.prev_position} is recruited to node {agent_node.id}.')
+        # else:
+        #     lg.info(f'Agent #{self.id} stays in node {self.position}.')
 
 
     ##########################################################################
@@ -299,13 +281,17 @@ class Agent:
                 percent = 1/(1 + utility)
             # print(percent,'ak',self.id,self.position)
             abandonment = Agent.k * percent
-            agent_node_cross = None
-            if len(agents[0]) > 0:
-                agent = np.random.choice(agents[0])
-                agent_node_cross = Agent.arena.tree.catch_node(self.position).get_sibling_node(agent.position)
+            agent_node = None
+            if len(agents) > 0:
+                id = np.random.choice(np.arange(len(agents)))
+                agent = agents[id]
+                agent_node = node.get_sibling_node(agent[1])
             cross_inhibition = 0
-            if agent_node_cross is not None:
-                utility = agent.tree.catch_node(agent.position).filter.utility
+            if agent_node is not None:
+                leaf_id,leaf_utility=agent[0].get_id_utility()
+                self.sensing=agent_node.id
+                self.update_world_utility(leaf_utility,leaf_id,None)
+                utility = self.tree.catch_node(self.sensing).filter.utility
                 if utility<= 0:
                     percent = 0
                 elif utility< Agent.arena.MAX_utility:
@@ -317,10 +303,8 @@ class Agent:
             p = np.random.uniform(0,1)
             if p < abandonment + cross_inhibition:
                 self.position = node.parent_node.id
-                # print('abandon',self.position)
-
-                if Agent.mode == 'log':
-                    lg.info(f'Agent #{self.id} leaves node {self.prev_position} to parent_node {self.position}.')
-            else:
-                if Agent.mode == 'log':
-                    lg.info(f'Agent #{self.id} stays in node {self.position}.')
+            #    print('abandon',self.position)
+            #
+            #     lg.info(f'Agent #{self.id} leaves node {self.prev_position} to parent_node {self.position}.')
+            # else:
+            #     lg.info(f'Agent #{self.id} stays in node {self.position}.')

@@ -49,7 +49,6 @@ def start(argv):
         importlib.import_module(".arena",lib_pkg)
 
     arena = ArenaFactory.create_arena(arena_config)
-    results = Results(arena)
     gui_config = tree.getroot().find('gui')
     if gui_config is not None: #original file - used for GUI
         global tk
@@ -68,6 +67,7 @@ def start(argv):
         GUIFactory.create_gui(root, arena, gui_config )
         root.mainloop()
     else:
+        results = Results(arena)
         num_runs = 0
         while num_runs < arena.num_runs:
             print ("************* Run number: ", num_runs, ' *************')
