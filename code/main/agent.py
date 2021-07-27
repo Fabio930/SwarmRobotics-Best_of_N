@@ -108,7 +108,7 @@ class Agent:
                             datefmt='%H:%M:%S',
                             level= lg.INFO)
         # state (0=descending,1=ascending)
-        self.state = 0
+        self.state = np.random.choice([0,1])
 
         # position is the id of the current node
         self.position = 0
@@ -133,7 +133,7 @@ class Agent:
     # generic init function brings back to initial positions
     def init_experiment( self ):
         self.tree = copy.deepcopy(self.init_tree)
-        self.state = 0
+        self.state = np.random.choice([0,1])
         self.position = 0
         self.prev_position = 0
         self.sensing = None
@@ -147,11 +147,21 @@ class Agent:
                 for n in node.child_nodes:
                     self.tree.catch_node(self.position).add_child(n,Agent.beta)
         p = np.random.uniform(0,1)
-        if self.state == 0 and p < Agent.P_a:
+        if self.state==0 and p<Agent.P_a:
             self.state = 1
-        elif self.state ==1 and p < Agent.P_d:
+            # print(self.state,self.id,'++++++++++++')
+        elif self.state==1 and p<Agent.P_d:
             self.state = 0
 
+        if self.position==0:
+            self.state=0
+        else:
+            leafs=self.tree.get_leaf_nodes()
+            for l in leafs:
+                if self.position==l.id:
+                    self.state=1
+                    break
+            # print(self.state,self.id,'------------')
         # lg.info(f'Agent #{self.id} is in new state {self.state}.')
 
     ##########################################################################
@@ -163,10 +173,11 @@ class Agent:
             if leaf is None:
                 leaf = self.tree.catch_node(self.sensing)
             leaf.filter.update_utility(sensed_utility)
-            for c in leaf.parent_node.child_nodes:
-                if c is not None:
-                    leaf.parent_node.filter.update_utility(c.filter.utility)
-            self.update_world_utility(sensed_utility,leaf_id,leaf.parent_node)
+            if leaf.parent_node is not None:
+                for c in leaf.parent_node.child_nodes:
+                    if c is not None:
+                        leaf.parent_node.filter.update_utility(c.filter.utility)
+                self.update_world_utility(sensed_utility,leaf_id,leaf.parent_node)
         else:
             if ref.parent_node is not None:
                 for c in ref.parent_node.child_nodes:
@@ -179,12 +190,14 @@ class Agent:
     # save position and choose a new one
     def update(self):
         self.prev_position = self.position
-        neighbors = Agent.arena.get_neighbor_agents(self)
-        self.update_neighbors_position(neighbors)
         if self.state == 0:
-            self.descending(neighbors)
+            neighborsD = Agent.arena.get_neighbor_agentsD(self)
+            self.update_neighbors_position(neighborsD)
+            self.descending(neighborsD)
         else:
-            self.ascending(neighbors)
+            neighborsA = Agent.arena.get_neighbor_agentsA(self)
+            self.update_neighbors_position(neighborsA)
+            self.ascending(neighborsA)
 
     ##########################################################################
     # updates the agent position in the tree structure
@@ -220,7 +233,8 @@ class Agent:
         if node.child_nodes[0] is not None:
             selected_node = np.random.choice(node.child_nodes)
             leaf_id, leaf_utility = Agent.arena.get_node_utility(selected_node.id)
-            self.sensing=selected_node.id
+            self.sensingC=selected_node.id
+            self.sensing=self.sensingC
             self.update_world_utility(leaf_utility,leaf_id,None)
             if selected_node.filter.utility == None or selected_node.filter.utility < 0:
                 percent = 0
@@ -228,11 +242,11 @@ class Agent:
                 percent = selected_node.filter.utility/Agent.arena.MAX_utility
             else:
                 percent = 1
-            # print(percent,'dk',self.id,self.position)
             commitment = Agent.k * percent
         else:
             leaf_id, leaf_utility = Agent.arena.get_node_utility(node.id)
-            self.sensing=node.id
+            self.sensingC=node.id
+            self.sensing=self.sensingC
             self.update_world_utility(leaf_utility,leaf_id,None)
         agent_node = None
 
@@ -253,18 +267,18 @@ class Agent:
                 percent = utility/Agent.arena.MAX_utility
             else:
                 percent = 1
-            # print(percent,'dh',self.id,self.position,agent.position)
             recruitment = Agent.h * percent
         p = np.random.uniform(0,1)
         if p < commitment:
-            self.position = selected_node.id
-            # print('committed',self.position)
+            self.position = self.sensingC
+            # print('committed',self.id,self.prev_position,'to',self.position,'c',commitment)
             # lg.info(f'Agent #{self.id} in node {self.prev_position} is committed to node {selected_node.id}.')
         elif p < commitment + recruitment:
             self.position = agent_node.id
-        #    print('recruited',self.position)
-
-        #     lg.info(f'Agent #{self.id} in node {self.prev_position} is recruited to node {agent_node.id}.')
+        #     print('recruited',self.id,self.prev_position,'to',self.position,'r',recruitment)
+        # else:
+        #     print('fermo',self.id,self.position,'c',commitment,'r',recruitment)
+#     lg.info(f'Agent #{self.id} in node {self.prev_position} is recruited to node {agent_node.id}.')
         # else:
         #     lg.info(f'Agent #{self.id} stays in node {self.position}.')
 
@@ -273,13 +287,15 @@ class Agent:
     # ascending transition
     def ascending(self,agents):
         node = self.tree.catch_node(self.position)
+        leaf_id, leaf_utility = Agent.arena.get_node_utility(node.id)
+        self.sensing=node.id
+        self.update_world_utility(leaf_utility,leaf_id,None)
         if node.parent_node is not None:
             utility = node.filter.utility
             if utility <= 0:
                 percent = 1
             else:
                 percent = 1/(1 + utility)
-            # print(percent,'ak',self.id,self.position)
             abandonment = Agent.k * percent
             agent_node = None
             if len(agents) > 0:
@@ -298,13 +314,13 @@ class Agent:
                     percent = utility/Agent.arena.MAX_utility
                 else:
                     percent = 1
-                # print(percent,'ah',self.id,self.position,agent.position)
                 cross_inhibition = Agent.h * percent
             p = np.random.uniform(0,1)
             if p < abandonment + cross_inhibition:
                 self.position = node.parent_node.id
-            #    print('abandon',self.position)
-            #
+                # print('abandon',self.id,self.prev_position,'to',self.position,'a',abandonment,'ci',cross_inhibition)
+            # else:
+                # print('fermo',self.id,self.position,'a',abandonment,'ci',cross_inhibition)
             #     lg.info(f'Agent #{self.id} leaves node {self.prev_position} to parent_node {self.position}.')
             # else:
             #     lg.info(f'Agent #{self.id} stays in node {self.position}.')

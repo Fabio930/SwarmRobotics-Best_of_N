@@ -200,7 +200,7 @@ class Arena:
 
     ##########################################################################
     # return the list of agents
-    def get_neighbor_agents( self, agent):
+    def get_neighbor_agentsD( self, agent):
         neighbor_list = []
         node = self.tree.catch_node(agent.position)
         for a in self.agents:
@@ -211,15 +211,22 @@ class Arena:
                     flag = node.get_sub_node(a.position)
                     if flag is not None:
                         neighbor_list.append([a,flag.id])
-                    elif node.parent_node is not None:
-                        if node.parent_node.id == a.position:
-                            neighbor_list.append([a,a.position])
-
-                        elif node.get_sibling_node(a.position) is not None:
-                            neighbor_list.append([a,node.get_sibling_node(a.position).id])
-
         return neighbor_list
 
+    def get_neighbor_agentsA( self, agent):
+        neighbor_list = []
+        node = self.tree.catch_node(agent.position)
+        for a in self.agents:
+            if a is not agent :
+                if a.position==agent.position:
+                    neighbor_list.append([a,a.position])
+                else:
+                    if node.parent_node is not None:
+                        if node.parent_node.id == a.position:
+                            neighbor_list.append([a,a.position])
+                        elif node.get_sibling_node(a.position) is not None:
+                            neighbor_list.append([a,node.get_sibling_node(a.position).id])
+        return neighbor_list
     ##########################################################################
     # return a the utility of a random leaf node with his id
     def get_node_utility(self,node_id):

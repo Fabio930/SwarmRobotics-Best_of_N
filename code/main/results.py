@@ -35,7 +35,8 @@ class Results:
             if a is not None:
                 sum += 1
         flag1 = sum/self.arena.num_agents
-
+        if flag1==1:
+            flag1=0.99
         for j in np.arange(0,1.05,.05):
             if flag1>=j and flag1<j+.05:
                 self.heat_map.update({round(j,2):self.heat_map.get(round(j,2))+1})
