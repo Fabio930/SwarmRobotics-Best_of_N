@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+
+<configuration>
+    <!-- <gui
+          pixels_per_meter = '400'
+          /> -->
+    <arena
+          debug='n'
+          size='1'
+          MAX_utility="10"
+          MAX_std="1"
+          num_agents="100"
+          max_steps="1000"
+          num_runs="100"
+          tree_branches="2"
+          tree_depth="1"
+          k='1'
+          structure='known'
+          >
+          <agent
+                h='.9167'
+                k='.0833'
+                alpha='0'
+                comm_range ='limited'
+                />
+    </arena>
+</configuration>
