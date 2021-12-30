@@ -1,7 +1,0 @@
-#!/usr/local/bin/python3
-
-from main import main
-import sys
-
-if __name__ == "__main__":
-    main.start(sys.argv[1:])
