@@ -1,0 +1,7 @@
+#!/usr/local/bin/python3
+
+from plots import main_pareto
+import sys
+
+if __name__ == "__main__":
+    main_pareto.start(sys.argv[1:])
