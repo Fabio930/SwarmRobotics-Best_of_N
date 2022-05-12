@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os, random, sys, getopt, importlib
-from plots.plots import Plots
+from plots.pareto_plot import Plots_pareto
 ########################################################################################
 ## main functions
 ########################################################################################
@@ -12,7 +12,7 @@ def print_usage(errcode = None):
 
 def start(argv):
 
-    plotter = Plots()
+    plotter = Plots_pareto()
     plotter.print()
 if __name__ == "__main__":
     start(sys.argv[1:])
