@@ -1,1 +1,30 @@
+<?xml version="1.0"?>
 
+<configuration>
+    <!-- <gui
+          pixels_per_meter = '500'
+          /> -->
+    <arena
+          debug='n'
+          size='1'
+          MAX_utility="10"
+          MAX_std="1"
+          num_agents="100"
+          max_steps="10000"
+          rec_time='100'
+          num_runs="100"
+          tree_branches="16"
+          tree_depth="1"
+          k='1'
+          >
+          <agent
+                collision='0'
+                r_gain='3'
+                quorum_list_min="10"
+                quorum_min='1'
+                time_reset_quorum="11"
+                alpha='.75'
+                comm_distance ='.1'
+                />
+    </arena>
+</configuration>
