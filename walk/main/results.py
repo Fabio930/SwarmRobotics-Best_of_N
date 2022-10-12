@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# @author Fabio Oddi <fabioddi24@gmail.com>
+
 import pandas as pd
 import numpy as np
 import os, math, csv
