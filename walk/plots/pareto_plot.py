@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# @author Fabio Oddi <fabioddi24@gmail.com>
 import matplotlib.lines as mlines
 import numpy as np
 import os, csv, math
