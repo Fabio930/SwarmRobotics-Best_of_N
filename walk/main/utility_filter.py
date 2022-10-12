@@ -1,3 +1,5 @@
+# @author Fabio Oddi <fabioddi24@gmail.com>
+
 import numpy as np
 import math
 ##########################################################################
