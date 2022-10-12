@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# @author Fabio Oddi <fabioddi24@gmail.com>
+
 import seaborn as sns
 import pandas as pd
 import matplotlib as mpl
