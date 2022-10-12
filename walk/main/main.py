@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# @author Fabio Oddi <fabioddi24@gmail.com>
 
 import os, random, sys, getopt, importlib
 import xml.etree.ElementTree as ET
