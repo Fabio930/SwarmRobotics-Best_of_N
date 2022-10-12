@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# @author Fabio Oddi <fabioddi24@gmail.com>
+
 import math, copy,matplotlib
 from colour import Color
 from matplotlib import cm
