@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# @author Fabio Oddi <fabioddi24@gmail.com>
+
 import sys, random, copy,math,time,curses
 import numpy as np
 from main.agent import AgentFactory
