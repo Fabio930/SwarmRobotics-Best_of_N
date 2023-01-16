@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # @author Fabio Oddi <fabioddi24@gmail.com>
 
-import os, random, sys, getopt, importlib
+import os, sys, getopt, importlib
 import xml.etree.ElementTree as ET
 from main.arena import ArenaFactory
 from main.gui import GUIFactory
